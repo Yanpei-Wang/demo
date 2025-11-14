@@ -35,7 +35,7 @@ sequenceDiagram
         PS->>PS: Parse education_jsonb -> List<Education>, Parse experience_jsonb -> List<Experience>
     end
     
-    alt If requested_fields includes 'completedTraining'
+    alt If requested_fields includes 'training'
         PS->>DB: SELECT * FROM training WHERE user_id = :user_id
         DB->>PS: Training Data
     end

@@ -51,10 +51,15 @@ const ProfilePage = () => {
             },
         ],
         preferredCommunication: "Email",
-        completedTraining: ["Training 1", "Training 2"],
+        // 修改 completedTraining 结构
+        completedTraining: [
+            { id: 1, name: "Training 1", status: "completed" },
+            { id: 2, name: "Training 2", status: "not completed" },
+        ],
     });
     const [showPersonalEditModal, setShowPersonalEditModal] = useState(false);
     const [editingPersonalInfo, setEditingPersonalInfo] = useState({}); // 用于表单数据
+    const [editingTrainings, setEditingTrainings] = useState([]); // 新增：用于编辑培训列表
     const [isTechOnly, setIsTechOnly] = useState(false);
     const userUsesGoogleChat = editingPersonalInfo.preferredCommunication === "Google Chat";
     // 工作经验状态 - 修改结构
@@ -117,6 +122,7 @@ const ProfilePage = () => {
             ...personalInfo,
             emails: personalInfo.emails.map(email => ({ ...email }))
         });
+        setEditingTrainings(personalInfo.completedTraining.map(t => ({ ...t }))); // 深拷贝培训列表
         setShowPersonalEditModal(true);
     };
 
@@ -126,12 +132,8 @@ const ProfilePage = () => {
 
     const handlePersonalFormChange = (e) => {
         const { name, value } = e.target;
-        if (name === "completedTraining") {
-            setEditingPersonalInfo((prev) => ({
-                ...prev,
-                [name]: value.split(",").map((item) => item.trim()),
-            }));
-        } else if (name !== "emails") {
+        // completedTraining 不再通过此函数直接处理
+        if (name !== "emails") {
             setEditingPersonalInfo((prev) => ({ ...prev, [name]: value }));
         }
     };
@@ -193,6 +195,27 @@ const ProfilePage = () => {
         });
     };
 
+    // 培训信息处理函数
+    const handleTrainingItemChange = (id, field, value) => {
+        setEditingTrainings(prevList =>
+            prevList.map(item =>
+                item.id === id ? { ...item, [field]: value } : item
+            )
+        );
+    };
+
+    const handleAddTrainingItem = () => {
+        setEditingTrainings(prev => [
+            ...prev,
+            { id: Date.now(), name: "", status: "not completed" }, // 默认状态
+        ]);
+    };
+
+    const handleDeleteTrainingItem = (id) => {
+        setEditingTrainings(prev => prev.filter(item => item.id !== id));
+    };
+
+
     const handleSavePersonalEdit = () => {
         const cleanedEmails = editingPersonalInfo.emails.filter(emailItem =>
             emailItem.isPrimary || emailItem.email.trim() !== ""
@@ -216,7 +239,13 @@ const ProfilePage = () => {
             });
         }
 
-        setPersonalInfo({ ...editingPersonalInfo, emails: finalEmails });
+        const cleanedTrainings = editingTrainings.filter(t => t.name.trim() !== ""); // 过滤掉名称为空的培训
+
+        setPersonalInfo({
+            ...editingPersonalInfo,
+            emails: finalEmails,
+            completedTraining: cleanedTrainings, // 保存培训列表
+        });
         setShowPersonalEditModal(false);
     };
 
@@ -457,10 +486,15 @@ const ProfilePage = () => {
                         </div>
 
 
+                        {/* 修改后的 Training section */}
                         <div className="section">
-                            <h3>Completed Training</h3>
-                            {personalInfo.completedTraining.map((training, index) => (
-                                <p key={index} className="section-text">{training}</p>
+                            <h3>Training</h3>
+                            {personalInfo.completedTraining.map((training) => (
+                                <p key={training.id} className="section-text training-display-row">
+                                    {training.name}
+                                    {training.status === "completed" && <span className="training-tag completed">Completed</span>}
+                                    {training.status === "not completed" && <span className="training-tag not-completed">Not Completed</span>}
+                                </p>
                             ))}
                         </div>
                     </div>
@@ -469,7 +503,7 @@ const ProfilePage = () => {
 
             {/* --- 模态框 --- */}
 
-            {/* 个人信息编辑模态框 (保持不变) */}
+            {/* 个人信息编辑模态框 */}
             {showPersonalEditModal && (
                 <div className="modal-overlay">
                     <div className="modal-content">
@@ -578,6 +612,33 @@ const ProfilePage = () => {
                                 </p>
                             </div>
 
+                            {/* 新增的培训编辑区域 */}
+                            {/* <div className="training-edit-section">
+                                <div className="section-header">
+                                    <h3>Training</h3>
+                                    <button type="button" className="edit-button" aria-label="Add New Training" onClick={handleAddTrainingItem}>+</button>
+                                </div>
+                                {editingTrainings.map(trainingItem => (
+                                    <div key={trainingItem.id} className="training-edit-item">
+                                        <input
+                                            type="text"
+                                            value={trainingItem.name}
+                                            onChange={(e) => handleTrainingItemChange(trainingItem.id, "name", e.target.value)}
+                                            placeholder="Training Name"
+                                        />
+                                        <select
+                                            value={trainingItem.status}
+                                            onChange={(e) => handleTrainingItemChange(trainingItem.id, "status", e.target.value)}
+                                        >
+                                            <option value="completed">Completed</option>
+                                            <option value="not completed">Not Completed</option>
+                                        </select>
+                                        <button type="button" className="delete-btn" onClick={() => handleDeleteTrainingItem(trainingItem.id)}>-</button>
+                                    </div>
+                                ))}
+                            </div> */}
+
+
                             <label>
                                 Preferred Communication Method
                                 <div className="radio-group">
@@ -682,7 +743,7 @@ const ProfilePage = () => {
 
                                 {/* End date (Month/Year dropdowns, disabled if currently working) */}
                                 <div className="form-group date-group">
-                                    <label>End date</label>
+                                    <label>End date*</label>
                                     <div className="date-inputs">
                                         <select
                                             value={item.endMonth || ""}
@@ -710,16 +771,6 @@ const ProfilePage = () => {
                             </div>
 
                         ))}
-                        {/* Are you transitioning into the tech industry? */}
-                        <div className="form-group-checkbox">
-                            <input
-                                type="checkbox"
-                                id="tech-only-checkbox"
-                                checked={isTechOnly}
-                                onChange={(e) => setIsTechOnly(e.target.checked)}
-                            />
-                            <label htmlFor="tech-only-checkbox">Are you transitioning into the tech industry?</label>
-                        </div>
                         <div className="modal-actions">
                             <button type="button" onClick={handleCloseExperienceEdit}>Cancel</button>
                             <button type="button" onClick={handleSaveExperienceEdit}>Save</button>
@@ -751,7 +802,7 @@ const ProfilePage = () => {
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label htmlFor={`edu-degree-${item.id}`}>Degree</label>
+                                    <label htmlFor={`edu-degree-${item.id}`}>Degree*</label>
                                     <select
                                         id={`edu-degree-${item.id}`}
                                         value={item.degree || ""}
@@ -767,7 +818,7 @@ const ProfilePage = () => {
                                 </div>
 
                                 <div className="form-group">
-                                    <label htmlFor={`edu-field-${item.id}`}>Field of study</label>
+                                    <label htmlFor={`edu-field-${item.id}`}>Field of study*</label>
                                     <input
                                         id={`edu-field-${item.id}`}
                                         type="text"
@@ -803,7 +854,7 @@ const ProfilePage = () => {
 
                                 {/* **End date (Month/Year dropdowns)** */}
                                 <div className="form-group date-group">
-                                    <label>End date</label>
+                                    <label>End date*</label>
                                     <div className="date-inputs">
                                         <select
                                             value={item.endMonth || ""}

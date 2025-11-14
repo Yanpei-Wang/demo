@@ -17,6 +17,12 @@
   --tag-text-color: #fff; /* 默认标签文字白色 */
   --tag-alternative-text-color: #333; /* Alternative 标签文字深色 */
 
+  /* 新增：训练标签颜色 */
+  --training-completed-bg: #B6A5F8;
+  --training-not-completed-bg: #DED1FB;
+  --training-not-completed-text: #333; /* 适用于黄色背景的深色文字 */
+
+
   /* 更新删除按钮颜色变量，使其与 --text-color-light 和 --tag-contact-bg 保持一致 */
   --delete-btn-bg: var(--text-color-light); /* 使用柔和的浅灰色作为删除按钮背景 */
   --delete-btn-hover-bg: var(--tag-contact-bg); /* 鼠标悬停时使用联系邮件的浅紫色 */
@@ -169,6 +175,37 @@ body {
     background-color: var(--tag-alternative-bg);
     color: var(--tag-alternative-text-color); /* Alternative 标签文字颜色不同 */
 }
+
+/* 新增：训练标签样式 */
+.training-display-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.training-tag {
+    display: inline-flex;
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--tag-text-color);
+    white-space: nowrap;
+    align-items: center;
+    height: 24px;
+}
+
+.training-tag.completed {
+    background-color: var(--training-completed-bg); /* 绿色 */
+}
+
+.training-tag.not-completed {
+    background-color: var(--training-not-completed-bg); /* 琥珀色/黄色 */
+    color: var(--training-not-completed-text); /* 适用于黄色背景的深色文字 */
+}
+
 
 .section-header {
   display: flex;
@@ -358,6 +395,30 @@ body {
     margin-right: 6px;
     transform: scale(1.05);
 }
+
+/* 新增：培训编辑区样式 */
+.training-edit-section {
+    margin-top: 30px;
+    border-top: 1px solid var(--border-color-light);
+    padding-top: 25px;
+}
+
+.training-edit-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 12px;
+}
+
+.training-edit-item input[type="text"],
+.training-edit-item select {
+    flex-grow: 1;
+    padding: 9px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.95em;
+}
+
 
 /* 统一 delete-btn 的基础样式 */
 .delete-btn {
