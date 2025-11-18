@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>测试下一轮日期</title>
+</head>
+<body>
+    <h1>日期测试</h1>
+    <div id="result"></div>
+    
+    <script>
+        const currentDate = new Date();
+        const nextRoundStartDate = new Date('2026-03-01');
+        
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = `
+            <p><strong>当前日期:</strong> ${currentDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <p><strong>下一轮开始日期:</strong> ${nextRoundStartDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <p><strong>是否是未来日期:</strong> ${nextRoundStartDate > currentDate ? '是 ✅' : '否 ❌'}</p>
+        `;
+    </script>
+</body>
+</html>
