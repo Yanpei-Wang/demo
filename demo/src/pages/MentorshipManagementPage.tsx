@@ -349,7 +349,7 @@ export function MentorshipManagementPage() {
             </div>
 
             {/* Date Range */}
-            {/* <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="startDate" className="text-sm font-semibold text-gray-700">
                   Start Date <span className="text-red-500">*</span>
@@ -375,7 +375,7 @@ export function MentorshipManagementPage() {
                   className="border-gray-300 focus:border-[#6035F3] focus:ring-[#6035F3]"
                 />
               </div>
-            </div> */}
+            </div>
 
             {/* Required Meetings */}
             <div className="space-y-2">
