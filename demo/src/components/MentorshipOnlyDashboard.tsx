@@ -82,13 +82,13 @@ export function MentorshipOnlyDashboard({ userData }: MentorshipOnlyDashboardPro
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
-          <div className="p-3 rounded-lg bg-[#6035F3]/10 text-[#6035F3]">
+          {/* <div className="p-3 rounded-lg bg-[#6035F3]/10 text-[#6035F3]">
             <GraduationCap className="h-8 w-8" />
-          </div>
+          </div> */}
           <div>
-            <h1 className="text-3xl mb-2">Mentorship Dashboard</h1>
-            <p className="text-gray-600">Welcome back, {userData.name}</p>
-            <p className="text-sm text-gray-500 mt-1">View your mentorship programs</p>
+            <h1 className="text-gray-600">👏 Welcome, {userData.name}</h1>
+            {/* <p className="text-gray-600">Welcome back, {userData.name}</p>
+            <p className="text-sm text-gray-500 mt-1">View your mentorship programs</p> */}
           </div>
         </div>
 
