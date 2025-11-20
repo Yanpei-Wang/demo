@@ -26,10 +26,10 @@ const INDUSTRIES = [
   'UI / UX',
   'Data Science',
   'Product Management',
-  'Marketing',
-  'Sales',
-  'Finance',
-  'Consulting',
+  // 'Marketing',
+  // 'Sales',
+  // 'Finance',
+  // 'Consulting',
   // 'Other',
 ];
 
@@ -238,43 +238,44 @@ export function MentorshipRegistrationDialog({
             )}
 
             {/* Industry Selection */}
-            <div className="space-y-3">
-              <Label className="text-sm font-semibold text-gray-700">
-                {industryLabel} <span className="text-red-500">*</span>
-              </Label>
-              <RadioGroup
-                value={formData.industry}
-                onValueChange={(value) => (!isLocked || tryEditMode) && setFormData({ ...formData, industry: value })}
-                disabled={isLocked && !tryEditMode}
-                className="space-y-2"
-              >
-                {INDUSTRIES.map((industry) => {
-                  const isSelected = formData.industry === industry;
-                  return (
-                    <div
-                      key={industry}
-                      className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${
-                        isSelected && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
-                      }`}
-                    >
-                      <RadioGroupItem value={industry} id={`industry-${industry}`} disabled={isLocked && !tryEditMode} />
-                      <Label
-                        htmlFor={`industry-${industry}`}
-                        className={`text-sm cursor-pointer ${
-                          isSelected && (isLocked && !tryEditMode)
-                            ? 'text-[#6035F3] font-semibold'
-                            : (isLocked && !tryEditMode)
-                            ? 'text-gray-400'
-                            : 'text-gray-700'
-                        }`}
+            {/* Industry Selection — mentee only */}
+            {role === 'mentee' && (
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold text-gray-700">
+                  {industryLabel} <span className="text-red-500">*</span>
+                </Label>
+                <RadioGroup
+                  value={formData.industry}
+                  onValueChange={(value) => (!isLocked || tryEditMode) && setFormData({ ...formData, industry: value })}
+                  disabled={isLocked && !tryEditMode}
+                  className="space-y-2"
+                >
+                  {INDUSTRIES.map((industry) => {
+                    const isSelected = formData.industry === industry;
+                    return (
+                      <div
+                        key={industry}
+                        className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${isSelected && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
+                          }`}
                       >
-                        {industry}
-                      </Label>
-                    </div>
-                  );
-                })}
-              </RadioGroup>
-            </div>
+                        <RadioGroupItem value={industry} id={`industry-${industry}`} disabled={isLocked && !tryEditMode} />
+                        <Label
+                          htmlFor={`industry-${industry}`}
+                          className={`text-sm cursor-pointer ${isSelected && (isLocked && !tryEditMode)
+                              ? 'text-[#6035F3] font-semibold'
+                              : (isLocked && !tryEditMode)
+                                ? 'text-gray-400'
+                                : 'text-gray-700'
+                            }`}
+                        >
+                          {industry}
+                        </Label>
+                      </div>
+                    );
+                  })}
+                </RadioGroup>
+              </div>
+            )}
 
             {/* Skillsets Selection */}
             <div className="space-y-3">
@@ -288,9 +289,8 @@ export function MentorshipRegistrationDialog({
                   return (
                     <div
                       key={skillset}
-                      className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${
-                        isSelected && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
-                      }`}
+                      className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${isSelected && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
+                        }`}
                     >
                       <Checkbox
                         id={`skillset-${skillset}`}
@@ -300,13 +300,12 @@ export function MentorshipRegistrationDialog({
                       />
                       <Label
                         htmlFor={`skillset-${skillset}`}
-                        className={`text-sm cursor-pointer ${
-                          isSelected && (isLocked && !tryEditMode)
+                        className={`text-sm cursor-pointer ${isSelected && (isLocked && !tryEditMode)
                             ? 'text-[#6035F3] font-semibold'
                             : (isLocked && !tryEditMode)
-                            ? 'text-gray-400'
-                            : 'text-gray-700'
-                        }`}
+                              ? 'text-gray-400'
+                              : 'text-gray-700'
+                          }`}
                       >
                         {skillset}
                       </Label>
@@ -338,9 +337,8 @@ export function MentorshipRegistrationDialog({
                     return (
                       <div
                         key={option.value}
-                        className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${
-                          isSelected && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
-                        }`}
+                        className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${isSelected && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
+                          }`}
                       >
                         <RadioGroupItem
                           value={option.value.toString()}
@@ -349,13 +347,12 @@ export function MentorshipRegistrationDialog({
                         />
                         <Label
                           htmlFor={`capacity-${option.value}`}
-                          className={`text-sm cursor-pointer ${
-                            isSelected && (isLocked && !tryEditMode)
+                          className={`text-sm cursor-pointer ${isSelected && (isLocked && !tryEditMode)
                               ? 'text-[#6035F3] font-semibold'
                               : (isLocked && !tryEditMode)
-                              ? 'text-gray-400'
-                              : 'text-gray-700'
-                          }`}
+                                ? 'text-gray-400'
+                                : 'text-gray-700'
+                            }`}
                         >
                           {option.label}
                         </Label>
@@ -372,9 +369,8 @@ export function MentorshipRegistrationDialog({
                 Current Round Mentorship Goal (optional, max 200 characters)
               </Label>
               <div
-                className={`${
-                  (isLocked && !tryEditMode) && formData.goal ? 'bg-purple-50 border-2 border-purple-200 rounded-lg p-4' : ''
-                }`}
+                className={`${(isLocked && !tryEditMode) && formData.goal ? 'bg-purple-50 border-2 border-purple-200 rounded-lg p-4' : ''
+                  }`}
               >
                 <Textarea
                   id="goal"
@@ -382,11 +378,10 @@ export function MentorshipRegistrationDialog({
                   value={formData.goal}
                   onChange={(e) => (!isLocked || tryEditMode) && setFormData({ ...formData, goal: e.target.value })}
                   disabled={isLocked && !tryEditMode}
-                  className={`min-h-[100px] resize-none ${
-                    (isLocked && !tryEditMode) && formData.goal
+                  className={`min-h-[100px] resize-none ${(isLocked && !tryEditMode) && formData.goal
                       ? 'bg-transparent border-none text-[#6035F3] font-medium'
                       : 'border-gray-300 focus:border-[#6035F3] focus:ring-[#6035F3]'
-                  }`}
+                    }`}
                   maxLength={200}
                 />
               </div>
@@ -398,8 +393,8 @@ export function MentorshipRegistrationDialog({
             {/* Mentor/Mentee Preference for Next Round */}
             <div className="space-y-3">
               <Label className="text-sm font-semibold text-gray-700">
-                {role === 'mentee' 
-                  ? 'Would you prefer to continue with your current mentor or be matched with a different mentor?' 
+                {role === 'mentee'
+                  ? 'Would you prefer to continue with your current mentor or be matched with a different mentor?'
                   : 'Would you prefer to continue with your current mentee(s) or be matched with different mentee(s)?'}
               </Label>
               <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg mb-3">
@@ -415,58 +410,52 @@ export function MentorshipRegistrationDialog({
                 className="space-y-2"
               >
                 <div
-                  className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${
-                    formData.mentorPreference === 'continue' && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
-                  }`}
+                  className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${formData.mentorPreference === 'continue' && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
+                    }`}
                 >
                   <RadioGroupItem value="continue" id="preference-continue" disabled={isLocked && !tryEditMode} />
                   <Label
                     htmlFor="preference-continue"
-                    className={`text-sm cursor-pointer ${
-                      formData.mentorPreference === 'continue' && (isLocked && !tryEditMode)
+                    className={`text-sm cursor-pointer ${formData.mentorPreference === 'continue' && (isLocked && !tryEditMode)
                         ? 'text-[#6035F3] font-semibold'
                         : (isLocked && !tryEditMode)
-                        ? 'text-gray-400'
-                        : 'text-gray-700'
-                    }`}
+                          ? 'text-gray-400'
+                          : 'text-gray-700'
+                      }`}
                   >
                     Continue with my current {role === 'mentee' ? 'mentor' : 'mentee(s)'}
                   </Label>
                 </div>
                 <div
-                  className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${
-                    formData.mentorPreference === 'different' && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
-                  }`}
+                  className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${formData.mentorPreference === 'different' && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
+                    }`}
                 >
                   <RadioGroupItem value="different" id="preference-different" disabled={isLocked && !tryEditMode} />
                   <Label
                     htmlFor="preference-different"
-                    className={`text-sm cursor-pointer ${
-                      formData.mentorPreference === 'different' && (isLocked && !tryEditMode)
+                    className={`text-sm cursor-pointer ${formData.mentorPreference === 'different' && (isLocked && !tryEditMode)
                         ? 'text-[#6035F3] font-semibold'
                         : (isLocked && !tryEditMode)
-                        ? 'text-gray-400'
-                        : 'text-gray-700'
-                    }`}
+                          ? 'text-gray-400'
+                          : 'text-gray-700'
+                      }`}
                   >
                     Be matched with a different {role === 'mentee' ? 'mentor' : 'mentee(s)'}
                   </Label>
                 </div>
                 <div
-                  className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${
-                    formData.mentorPreference === 'no-preference' && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
-                  }`}
+                  className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${formData.mentorPreference === 'no-preference' && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
+                    }`}
                 >
                   <RadioGroupItem value="no-preference" id="preference-no-preference" disabled={isLocked && !tryEditMode} />
                   <Label
                     htmlFor="preference-no-preference"
-                    className={`text-sm cursor-pointer ${
-                      formData.mentorPreference === 'no-preference' && (isLocked && !tryEditMode)
+                    className={`text-sm cursor-pointer ${formData.mentorPreference === 'no-preference' && (isLocked && !tryEditMode)
                         ? 'text-[#6035F3] font-semibold'
                         : (isLocked && !tryEditMode)
-                        ? 'text-gray-400'
-                        : 'text-gray-700'
-                    }`}
+                          ? 'text-gray-400'
+                          : 'text-gray-700'
+                      }`}
                   >
                     No preference
                   </Label>
@@ -485,9 +474,8 @@ export function MentorshipRegistrationDialog({
                       return (
                         <div
                           key={menteeName}
-                          className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${
-                            isSelected && (isLocked && !tryEditMode) ? 'bg-white border border-[#6035F3]' : ''
-                          }`}
+                          className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${isSelected && (isLocked && !tryEditMode) ? 'bg-white border border-[#6035F3]' : ''
+                            }`}
                         >
                           <Checkbox
                             id={`mentee-${menteeName}`}
@@ -497,13 +485,12 @@ export function MentorshipRegistrationDialog({
                           />
                           <Label
                             htmlFor={`mentee-${menteeName}`}
-                            className={`text-sm cursor-pointer ${
-                              isSelected && (isLocked && !tryEditMode)
+                            className={`text-sm cursor-pointer ${isSelected && (isLocked && !tryEditMode)
                                 ? 'text-[#6035F3] font-semibold'
                                 : (isLocked && !tryEditMode)
-                                ? 'text-gray-400'
-                                : 'text-gray-700'
-                            }`}
+                                  ? 'text-gray-400'
+                                  : 'text-gray-700'
+                              }`}
                           >
                             {menteeName}
                           </Label>
