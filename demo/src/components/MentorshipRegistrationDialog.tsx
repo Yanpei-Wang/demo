@@ -66,11 +66,16 @@ export function MentorshipRegistrationDialog({
     skillsets: currentRegistration?.skillsets || [],
     menteeCapacity: currentRegistration?.menteeCapacity,
     goal: currentRegistration?.goal || '',
-    mentorPreference: currentRegistration?.mentorPreference || 'no-preference',
-    continueMenteeNames: currentRegistration?.continueMenteeNames || [],
+    mentorPreference: currentRegistration?.mentorPreference || 'no-preference', // Will be overridden on save
+    continueMenteeNames: currentRegistration?.continueMenteeNames || [], // Will be overridden on save
   });
 
-  // Reset form when dialog opens
+  // New state for individual partner preferences (always used now)
+  const [individualPartnerPreferences, setIndividualPartnerPreferences] = useState<
+    { name: string; preference: 'continue' | 'different' | 'no-preference'; type: 'current' | 'future' }[]
+  >([]);
+
+  // Reset form and initialize individual partner preferences when dialog opens or registration changes
   useEffect(() => {
     if (isOpen) {
       setTryEditMode(false); // Reset try edit mode
@@ -79,11 +84,56 @@ export function MentorshipRegistrationDialog({
         skillsets: currentRegistration?.skillsets || [],
         menteeCapacity: currentRegistration?.menteeCapacity,
         goal: currentRegistration?.goal || '',
-        mentorPreference: currentRegistration?.mentorPreference || 'no-preference',
-        continueMenteeNames: currentRegistration?.continueMenteeNames || [],
+        mentorPreference: 'no-preference', // Placeholder, actual value derived on save
+        continueMenteeNames: [], // Placeholder, actual value derived on save
       });
+
+      let partnersForTable: { name: string; type: 'current' }[] = [];
+      let placeholderPartner: { name: string; type: 'future' } | undefined;
+
+      // Determine partners for the table
+      if (currentPartnerNames && currentPartnerNames.length > 0) {
+        partnersForTable = currentPartnerNames.map(name => ({ name, type: 'current' }));
+      } else {
+        // No current partners, create a placeholder for global preference
+        if (role === 'mentee') {
+          placeholderPartner = { name: '我下一轮的导师偏好', type: 'future' };
+        } else { // role === 'mentor' with no current mentees
+          placeholderPartner = { name: '我下一轮的学员偏好', type: 'future' };
+        }
+      }
+
+      const initialIndividualPrefs = (partnersForTable.length > 0 ? partnersForTable : (placeholderPartner ? [placeholderPartner] : []))
+        .map(p => {
+          let preference: 'continue' | 'different' | 'no-preference' = 'no-preference';
+
+          // Initialize preference based on currentRegistration, respecting 'future' type
+          if (p.type === 'current' && currentRegistration?.mentorPreference === 'continue') {
+            if (role === 'mentor' && currentRegistration.continueMenteeNames?.includes(p.name)) {
+              preference = 'continue';
+            } else if (role === 'mentee' && currentPartnerNames?.includes(p.name)) {
+              // For a mentee, if global preference was continue, and this is their current mentor
+              preference = 'continue';
+            } else {
+              preference = 'different'; // Global continue, but this specific current partner wasn't explicitly chosen
+            }
+          } else if (currentRegistration?.mentorPreference === 'different') {
+            preference = 'different';
+          } else if (currentRegistration?.mentorPreference === 'no-preference') {
+            preference = 'no-preference';
+          }
+
+          // '继续合作'选项在逻辑上不适用于'future'类型的占位符
+          if (p.type === 'future' && preference === 'continue') {
+            preference = 'no-preference'; // Default to no-preference if continue was somehow set
+          }
+
+          return { ...p, preference };
+        });
+
+      setIndividualPartnerPreferences(initialIndividualPrefs);
     }
-  }, [isOpen, currentRegistration]);
+  }, [isOpen, currentRegistration, role, currentPartnerNames]);
 
   const handleSkillsetToggle = (skillset: string) => {
     if (isLocked && !tryEditMode) return;
@@ -108,23 +158,15 @@ export function MentorshipRegistrationDialog({
     });
   };
 
-  const handleMenteeToggle = (menteeName: string) => {
+  const handlePartnerPreferenceChange = (
+    partnerName: string,
+    preference: 'continue' | 'different' | 'no-preference'
+  ) => {
     if (isLocked && !tryEditMode) return;
 
-    setFormData((prev) => {
-      const isSelected = prev.continueMenteeNames?.includes(menteeName);
-      if (isSelected) {
-        return {
-          ...prev,
-          continueMenteeNames: prev.continueMenteeNames?.filter((name) => name !== menteeName),
-        };
-      } else {
-        return {
-          ...prev,
-          continueMenteeNames: [...(prev.continueMenteeNames || []), menteeName],
-        };
-      }
-    });
+    setIndividualPartnerPreferences((prev) =>
+      prev.map((p) => (p.name === partnerName ? { ...p, preference } : p))
+    );
   };
 
   const handleSave = () => {
@@ -149,15 +191,56 @@ export function MentorshipRegistrationDialog({
       toast.error('Goal description cannot exceed 200 characters');
       return;
     }
-    // Validate mentor preference - if continue is selected, at least one mentee should be selected
-    if (role === 'mentor' && formData.mentorPreference === 'continue' && currentPartnerNames && currentPartnerNames.length > 0) {
-      if (!formData.continueMenteeNames || formData.continueMenteeNames.length === 0) {
-        toast.error('Please select at least one mentee to continue with, or choose a different preference');
+
+    let finalMentorPreference: 'continue' | 'different' | 'no-preference' = 'no-preference';
+    let finalContinueMenteeNames: string[] = [];
+
+    const hasCurrentPartnersInTable = individualPartnerPreferences.some(p => p.type === 'current');
+
+    if (hasCurrentPartnersInTable) {
+      // Logic for existing partners (mentor or mentee with current mentor)
+      const selectedToContinue = individualPartnerPreferences.filter(
+        (p) => p.type === 'current' && p.preference === 'continue'
+      );
+
+      if (selectedToContinue.length > 0) {
+        finalMentorPreference = 'continue';
+        finalContinueMenteeNames = selectedToContinue.map((p) => p.name);
+      } else {
+        const allDifferent = individualPartnerPreferences.every(
+          (p) => p.type === 'current' && p.preference === 'different'
+        );
+        if (allDifferent) {
+          finalMentorPreference = 'different';
+        } else {
+          finalMentorPreference = 'no-preference';
+        }
+      }
+
+      // Specific validation for 'continue' preference for mentors:
+      if (role === 'mentor' && finalMentorPreference === 'continue' && finalContinueMenteeNames.length === 0) {
+        toast.error('请选择至少一位学员以继续合作，或选择其他偏好');
         return;
       }
+    } else {
+      // Logic for no current partners (using the placeholder row)
+      // There should be exactly one entry of type 'future'
+      const placeholderPref = individualPartnerPreferences[0]?.preference;
+      if (placeholderPref) {
+        // 'continue' is not a valid global preference without existing partners,
+        // if it was somehow selected (though disabled), treat it as 'no-preference'
+        finalMentorPreference = placeholderPref === 'continue' ? 'no-preference' : placeholderPref;
+      } else {
+        finalMentorPreference = 'no-preference'; // Fallback
+      }
+      finalContinueMenteeNames = []; // No specific mentees to continue with
     }
 
-    onSave(formData);
+    onSave({
+      ...formData,
+      mentorPreference: finalMentorPreference,
+      continueMenteeNames: finalContinueMenteeNames,
+    });
     setIsOpen(false);
     toast.success(isLocked ? 'Information saved' : 'Registration information updated');
   };
@@ -262,10 +345,10 @@ export function MentorshipRegistrationDialog({
                         <Label
                           htmlFor={`industry-${industry}`}
                           className={`text-sm cursor-pointer ${isSelected && (isLocked && !tryEditMode)
-                              ? 'text-[#6035F3] font-semibold'
-                              : (isLocked && !tryEditMode)
-                                ? 'text-gray-400'
-                                : 'text-gray-700'
+                            ? 'text-[#6035F3] font-semibold'
+                            : (isLocked && !tryEditMode)
+                              ? 'text-gray-400'
+                              : 'text-gray-700'
                             }`}
                         >
                           {industry}
@@ -301,10 +384,10 @@ export function MentorshipRegistrationDialog({
                       <Label
                         htmlFor={`skillset-${skillset}`}
                         className={`text-sm cursor-pointer ${isSelected && (isLocked && !tryEditMode)
-                            ? 'text-[#6035F3] font-semibold'
-                            : (isLocked && !tryEditMode)
-                              ? 'text-gray-400'
-                              : 'text-gray-700'
+                          ? 'text-[#6035F3] font-semibold'
+                          : (isLocked && !tryEditMode)
+                            ? 'text-gray-400'
+                            : 'text-gray-700'
                           }`}
                       >
                         {skillset}
@@ -348,10 +431,10 @@ export function MentorshipRegistrationDialog({
                         <Label
                           htmlFor={`capacity-${option.value}`}
                           className={`text-sm cursor-pointer ${isSelected && (isLocked && !tryEditMode)
-                              ? 'text-[#6035F3] font-semibold'
-                              : (isLocked && !tryEditMode)
-                                ? 'text-gray-400'
-                                : 'text-gray-700'
+                            ? 'text-[#6035F3] font-semibold'
+                            : (isLocked && !tryEditMode)
+                              ? 'text-gray-400'
+                              : 'text-gray-700'
                             }`}
                         >
                           {option.label}
@@ -379,8 +462,8 @@ export function MentorshipRegistrationDialog({
                   onChange={(e) => (!isLocked || tryEditMode) && setFormData({ ...formData, goal: e.target.value })}
                   disabled={isLocked && !tryEditMode}
                   className={`min-h-[100px] resize-none ${(isLocked && !tryEditMode) && formData.goal
-                      ? 'bg-transparent border-none text-[#6035F3] font-medium'
-                      : 'border-gray-300 focus:border-[#6035F3] focus:ring-[#6035F3]'
+                    ? 'bg-transparent border-none text-[#6035F3] font-medium'
+                    : 'border-gray-300 focus:border-[#6035F3] focus:ring-[#6035F3]'
                     }`}
                   maxLength={200}
                 />
@@ -390,12 +473,18 @@ export function MentorshipRegistrationDialog({
               </p>
             </div>
 
-            {/* Mentor/Mentee Preference for Next Round */}
+            {/* Mentor/Mentee Preference for Next Round - Always table-based */}
             <div className="space-y-3">
               <Label className="text-sm font-semibold text-gray-700">
-                {role === 'mentee'
-                  ? 'Would you prefer to continue with your current mentor or be matched with a different mentor?'
-                  : 'Would you prefer to continue with your current mentee(s) or be matched with different mentee(s)?'}
+                {/* 动态显示标题 */}
+                {individualPartnerPreferences.some(p => p.type === 'current')
+                  ? (role === 'mentee'
+                    ? 'Do you want to continue working with your current mentor, or be matched with a different mentor?'
+                    : 'What is your next-round preference regarding your current mentee?')
+                  : (role === 'mentee'
+                    ? 'What is your next-round mentor preference?'
+                    : 'What is your next-round mentee preference?')}
+
               </Label>
               <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg mb-3">
                 <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
@@ -403,108 +492,82 @@ export function MentorshipRegistrationDialog({
                   <strong>Note:</strong> This preference will only take effect if both you and your current {role === 'mentee' ? 'mentor' : 'mentee(s)'} register for the next round.
                 </p>
               </div>
-              <RadioGroup
-                value={formData.mentorPreference}
-                onValueChange={(value) => (!isLocked || tryEditMode) && setFormData({ ...formData, mentorPreference: value as 'continue' | 'different' | 'no-preference' })}
-                disabled={isLocked && !tryEditMode}
-                className="space-y-2"
-              >
-                <div
-                  className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${formData.mentorPreference === 'continue' && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
-                    }`}
-                >
-                  <RadioGroupItem value="continue" id="preference-continue" disabled={isLocked && !tryEditMode} />
-                  <Label
-                    htmlFor="preference-continue"
-                    className={`text-sm cursor-pointer ${formData.mentorPreference === 'continue' && (isLocked && !tryEditMode)
-                        ? 'text-[#6035F3] font-semibold'
-                        : (isLocked && !tryEditMode)
-                          ? 'text-gray-400'
-                          : 'text-gray-700'
-                      }`}
-                  >
-                    Continue with my current {role === 'mentee' ? 'mentor' : 'mentee(s)'}
-                  </Label>
-                </div>
-                <div
-                  className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${formData.mentorPreference === 'different' && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
-                    }`}
-                >
-                  <RadioGroupItem value="different" id="preference-different" disabled={isLocked && !tryEditMode} />
-                  <Label
-                    htmlFor="preference-different"
-                    className={`text-sm cursor-pointer ${formData.mentorPreference === 'different' && (isLocked && !tryEditMode)
-                        ? 'text-[#6035F3] font-semibold'
-                        : (isLocked && !tryEditMode)
-                          ? 'text-gray-400'
-                          : 'text-gray-700'
-                      }`}
-                  >
-                    Be matched with a different {role === 'mentee' ? 'mentor' : 'mentee(s)'}
-                  </Label>
-                </div>
-                <div
-                  className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${formData.mentorPreference === 'no-preference' && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
-                    }`}
-                >
-                  <RadioGroupItem value="no-preference" id="preference-no-preference" disabled={isLocked && !tryEditMode} />
-                  <Label
-                    htmlFor="preference-no-preference"
-                    className={`text-sm cursor-pointer ${formData.mentorPreference === 'no-preference' && (isLocked && !tryEditMode)
-                        ? 'text-[#6035F3] font-semibold'
-                        : (isLocked && !tryEditMode)
-                          ? 'text-gray-400'
-                          : 'text-gray-700'
-                      }`}
-                  >
-                    No preference
-                  </Label>
-                </div>
-              </RadioGroup>
 
-              {/* Mentor-only: Select specific mentees to continue with */}
-              {role === 'mentor' && formData.mentorPreference === 'continue' && currentPartnerNames && currentPartnerNames.length > 0 && (
-                <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg space-y-3">
-                  <Label className="text-sm font-semibold text-gray-700">
-                    Select which mentee(s) you'd like to continue with:
-                  </Label>
-                  <div className="space-y-2">
-                    {currentPartnerNames.map((menteeName) => {
-                      const isSelected = formData.continueMenteeNames?.includes(menteeName);
-                      return (
-                        <div
-                          key={menteeName}
-                          className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${isSelected && (isLocked && !tryEditMode) ? 'bg-white border border-[#6035F3]' : ''
-                            }`}
-                        >
-                          <Checkbox
-                            id={`mentee-${menteeName}`}
-                            checked={isSelected}
-                            onCheckedChange={() => handleMenteeToggle(menteeName)}
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {/* 动态显示列名 */}
+                        {individualPartnerPreferences.some(p => p.type === 'current')
+                          ? (role === 'mentee' ? 'Mentor' : 'Mentee')
+                          : '偏好类型' // For placeholder row
+                        }
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Continue
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Different
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        No Preference
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {individualPartnerPreferences.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center italic">
+                          无可用选项。请联系管理员。
+                        </td>
+                      </tr>
+                    ) : (
+                      individualPartnerPreferences.map((partner) => (
+                        <tr key={partner.name}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {partner.name}
+                          </td>
+                          {/* Each row has its own RadioGroup */}
+                          <RadioGroup
+                            value={partner.preference}
+                            onValueChange={(value: 'continue' | 'different' | 'no-preference') =>
+                              handlePartnerPreferenceChange(partner.name, value)
+                            }
                             disabled={isLocked && !tryEditMode}
-                          />
-                          <Label
-                            htmlFor={`mentee-${menteeName}`}
-                            className={`text-sm cursor-pointer ${isSelected && (isLocked && !tryEditMode)
-                                ? 'text-[#6035F3] font-semibold'
-                                : (isLocked && !tryEditMode)
-                                  ? 'text-gray-400'
-                                  : 'text-gray-700'
-                              }`}
+                            className="flex w-full" // Use flex to align radio items horizontally within the table row
                           >
-                            {menteeName}
-                          </Label>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {(!isLocked || tryEditMode) && (
-                    <p className="text-xs text-gray-500 italic">
-                      Select at least one mentee. You can continue with all or only some of your current mentees.
-                    </p>
-                  )}
-                </div>
-              )}
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                              <RadioGroupItem
+                                value="continue"
+                                id={`continue-${partner.name}`}
+                                disabled={isLocked && !tryEditMode || partner.type === 'future'} // Disable for 'future' type
+                                className="mx-auto"
+                              />
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                              <RadioGroupItem
+                                value="different"
+                                id={`different-${partner.name}`}
+                                disabled={isLocked && !tryEditMode}
+                                className="mx-auto"
+                              />
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                              <RadioGroupItem
+                                value="no-preference"
+                                id={`no-preference-${partner.name}`}
+                                disabled={isLocked && !tryEditMode}
+                                className="mx-auto"
+                              />
+                            </td>
+                          </RadioGroup>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </ScrollArea>
