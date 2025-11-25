@@ -12,7 +12,7 @@ sequenceDiagram
     User->>Frontend: Click "View Profile"
     
     activate Frontend
-    Frontend->>BE: GET /profile/me (Authorization: JWT, fields: string_optional)
+    Frontend->>BE: GET /profiles/me (Authorization: JWT, fields: string_optional)
     
     activate BE
     BE->>AS: Intercept Request
