@@ -9,7 +9,7 @@ sequenceDiagram
     participant DB as Database
  
 
-    Note over Frontend: Frontend has previously fetched the full Profile via GET /profile/me and stores its latest state.
+    Note over Frontend: Frontend has previously fetched the full Profile via GET /profiles/me and stores its latest state.
 
     User->>Frontend: Clicks "Edit Profile" (to modify User Basic Info)
     activate Frontend
@@ -17,7 +17,7 @@ sequenceDiagram
     User->>Frontend: Modifies user fields (e.g., firstName, lastName)
     User->>Frontend: Clicks "Save User Info"
     
-    Frontend->>BE: PATCH /profile/me?updateMask=user (Authorization: JWT)
+    Frontend->>BE: PATCH /profiles/me (Authorization: JWT)
     Note over Frontend,BE: Request body: {"profile": {"user": {"firstName": "Alice", "lastName": "Smith"}}}
     
     activate BE
@@ -65,7 +65,7 @@ sequenceDiagram
         Note over Frontend: Frontend manages internal IDs: uses existing for updates/deletions, omits for new entries.
         User->>Frontend: Clicks "Save Education"
         
-        Frontend->>BE: PATCH /profile/me?updateMask=education (Authorization: JWT)
+        Frontend->>BE: PATCH /profiles/me (Authorization: JWT)
         Note over Frontend,BE: Request body: {"profile": {"education": [{"id": "edu-1", "school": "UniX", ...}, {"school": "NewUni", ...}, ...]}} -- Full updated list from frontend's local state
         
         activate BE
@@ -105,7 +105,7 @@ sequenceDiagram
         Note over Frontend: Frontend manages internal IDs: uses existing for updates/deletions, omits for new entries.
         User->>Frontend: Clicks "Save Experience"
         
-        Frontend->>BE: PATCH /profile/me?updateMask=experience (Authorization: JWT)
+        Frontend->>BE: PATCH /profiles/me (Authorization: JWT)
         Note over Frontend,BE: Request body: {"profile": {"experience": [{"id": "exp-1", "company": "CoX", ...}, {"company": "NewCo", ...}, ...]}} -- Full new list from frontend's local state
         
         activate BE
