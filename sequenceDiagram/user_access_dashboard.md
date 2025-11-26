@@ -6,7 +6,7 @@ sequenceDiagram
     participant BE as Backend
     participant DB as Postgress/Redis
 
-    Note over User, FE: User accesses /dashboard (Authenticated)
+    Note over User, FE: User creare new meeting
 
     %% Step 1: Bootstrap Identity
     Note right of FE: Determine User Identity & Permissions at Login
@@ -45,8 +45,8 @@ sequenceDiagram
 
     %% Step 4: Mentorship Participation Data (Dependent on Pair ID)
     Note right of FE: Load Meeitng List
-    FE->>BE: GET /api/mentorship/pairs/{pairId}/meetings/me
-    BE->>DB: "SELECT mp.meeting_log FROM mentorship_pairs mp WHERE mp.pairId=:pairId"
+    FE->>BE: GET /api/mentorship/meetings/me?roundId=231312
+    BE->>DB: "SELECT mp.meeting_log FROM mentorship_pairs mp WHERE mp.roundId=:roundId"
     DB-->>BE: "[{...},{...}]"
     BE->>BE: Parse the meeting_log field as a list[dict]. For each dictionary object, check the value of isCompleted.
     alt isCompleted == true
