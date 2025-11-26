@@ -24,8 +24,8 @@ sequenceDiagram
     BE-->>FE: Return Rounds List
     FE ->>FE: Find Current Round ID
 
-    %% Step 3: Mentorship Data (Dependent on Round ID)
-    Note right of FE: Load Mentorship Details
+    %% Step 3: Mentorship Participation Data (Dependent on Round ID)
+    Note right of FE: Load Participation Details
     FE->>BE: GET /api/mentorship/rounds/{roundId}/participations/me
     BE->>DB: "SELECT mrp.is_matched, mrp.goal, mrp.participant_role FROM mentorship_round_participants mrp WHERE user_id = :userId, mrp.round_id = :roundId "
     DB-->>BE: (true, "I wanna ...", "mentor")
@@ -34,26 +34,33 @@ sequenceDiagram
         FE->>User: Render "Registration Status" / "Pending" State
     else User is Matched 
         Note right of BE: Search mentor_id or mentee_id based on the mrp.participant_role
-        BE->>DB: "SELECT * FROM mentorship_pairs mp WHERE mp.round_id=:roundId AND mp.mentor_id=:userId AND mp.status = 'active'"
-        DB-->BE: List of mentorship pair records for the authenticated user
-    
-        par Search meeting data
-            BE->>BE: Parse the mentorship_pairs.meeting_log field as a list[dict]. For each dictionary object, check the value of isCompleted.
-            alt isCompleted == true
-                BE->>DB: Query Redis for the value corresponding to the googleEventId, using the key format event:{googleEventId}:user:{userId/ldap}:attendance.
-                DB-->BE: Return real start and end time.
-            else
-                BE->>BE: Directly use the startDateTime and endDateTime fields from the dictionary. 
-            end
-        and Search partners name
-            BE->>DB: "SELECT u.id, u.first_name, u.last_name, u.preferred_name FROM user u WHERE u.id IN :menteeIds"
-            DB-->BE: [(123, Alice, Smith, Lili), (145, ...)]
-        end
-            BE->>BE: Build the response data
-            BE-->FE: 200 OK + Participation resources
-            FE->>User: Render "Mentorship Participation" & "Meeting List"
+        BE->>DB: "SELECT mp.pair_id, mp.mentee_id FROM mentorship_pairs mp WHERE mp.round_id=:roundId AND mp.mentor_id=:userId AND mp.status = 'active'"
+        DB-->BE: [("1245","123"),("1246","145")]
+        BE->>DB: "SELECT u.id, u.first_name, u.last_name, u.preferred_name FROM user u WHERE u.id IN :menteeIds"
+        DB-->BE: [(123, Alice, Smith, Lili), (145, ...)]
+
+        BE->>BE: Build the response data
+        BE-->FE: 200 OK + Participation resource
     end
-    %% Step 4: Work Activity (Dependent on Role)
+
+    %% Step 4: Mentorship Participation Data (Dependent on Pair ID)
+    Note right of FE: Load Meeitng List
+    FE->>BE: GET /api/mentorship/pairs/{pairId}/meetings/me
+    BE->>DB: "SELECT mp.meeting_log FROM mentorship_pairs mp WHERE mp.pairId=:pairId"
+    DB-->>BE: "[{...},{...}]"
+    BE->>BE: Parse the meeting_log field as a list[dict]. For each dictionary object, check the value of isCompleted.
+    alt isCompleted == true
+        BE->>DB: Query Redis for the value corresponding to the googleEventId, using the key format event:{googleEventId}:user:{userId/ldap}:attendance.
+        DB-->BE: Return real start and end time.
+    else
+        BE->>BE: Directly use the startDateTime and endDateTime fields from the dictionary. 
+    end
+
+    BE->>BE: Build the response data
+    BE-->FE: 200 OK + Meeting resources list
+    FE->>User: Render "Mentorship Participation" & "Meeting List"
+
+    %% Step 5: Work Activity (Dependent on Role)
     Note right of FE: Conditional Load for Internal Staff
     opt If Roles include "circlecat_employee", "circlecat_intern", "circlecat_volunteer" 
         FE->>BE: GET /api/summaries/me
