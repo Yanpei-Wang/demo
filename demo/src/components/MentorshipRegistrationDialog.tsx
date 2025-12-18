@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
@@ -9,41 +8,28 @@ import { Textarea } from './ui/textarea';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { Switch } from './ui/switch';
-import { FileText, AlertCircle, Edit3 } from 'lucide-react';
+import { FileText, AlertCircle, Edit3, UserCheck, UserX, ChevronDown, X, Check, Info } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { MentorshipRegistration } from '../types/dashboard';
+
+// --- Types & Constants ---
 
 interface MentorshipRegistrationDialogProps {
   role: 'mentor' | 'mentee';
   currentRegistration?: MentorshipRegistration;
-  isLocked: boolean; // If true, the form is locked and can't be edited
+  isLocked: boolean;
   onSave: (registration: MentorshipRegistration) => void;
-  currentPartnerNames?: string[]; // Current mentee/mentor names
+  currentPartnerNames?: string[];
 }
 
 const INDUSTRIES = [
-  'SWE',
-  'UI / UX',
-  'Data Science',
-  'Product Management',
-  // 'Marketing',
-  // 'Sales',
-  // 'Finance',
-  // 'Consulting',
-  // 'Other',
+  'SWE', 'UI / UX', 'Data Science', 'Product Management',
 ];
 
 const SKILLSETS = [
-  'Resume/LinkedIn Profile',
-  'Career Path Guidance',
-  'Experience Sharing',
-  'Industry Trends',
-  'Technical Skills Development',
-  'Soft Skills Enhancement',
-  'Networking',
-  'Project Management',
-  'Leadership',
-  'Communication Skills',
+  'Resume/LinkedIn Profile', 'Career Path Guidance', 'Experience Sharing',
+  'Industry Trends', 'Technical Skills Development', 'Soft Skills Enhancement',
+  'Networking', 'Project Management', 'Leadership', 'Communication Skills',
 ];
 
 const MENTEE_CAPACITIES = [
@@ -51,6 +37,126 @@ const MENTEE_CAPACITIES = [
   { value: 2, label: '2 mentees – around 6 hours' },
   { value: 3, label: '3 mentees – around 9 hours' },
 ];
+
+const MOCK_PAST_PARTNERS_POOL = ['Alex Johnson', 'Sarah Lee', 'Michael Chen', 'Emily Davis', 'David Wilson'];
+
+// --- Helper Component: MultiSelect Dropdown ---
+
+interface MultiSelectProps {
+  options: string[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+  placeholder?: string;
+  max?: number;
+  disabled?: boolean;
+  label?: string;
+}
+
+function MultiSelect({ options, selected, onChange, placeholder, max, disabled, label }: MultiSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (option: string) => {
+    if (selected.includes(option)) {
+      onChange(selected.filter((item) => item !== option));
+    } else {
+      if (max && selected.length >= max) {
+        toast.error(`You can only select up to ${max} ${label || 'options'}.`);
+        return;
+      }
+      onChange([...selected, option]);
+    }
+  };
+
+  const handleRemove = (e: React.MouseEvent, option: string) => {
+    e.stopPropagation();
+    if (disabled) return;
+    onChange(selected.filter((item) => item !== option));
+  };
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      {/* Trigger Area */}
+      <div
+        className={`min-h-[42px] w-full border rounded-md px-3 py-2 flex items-center justify-between cursor-pointer bg-white transition-all ${
+          disabled ? 'opacity-60 cursor-not-allowed bg-gray-50' : 'hover:border-gray-400'
+        } ${isOpen ? 'ring-2 ring-[#6035F3] border-transparent' : 'border-gray-300'}`}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+      >
+        <div className="flex flex-wrap gap-1.5 w-full pr-2">
+          {selected.length === 0 && (
+            <span className="text-gray-500 text-sm">{placeholder || 'Select...'}</span>
+          )}
+          {selected.map((item) => (
+            <Badge key={item} variant="secondary" className="bg-gray-100 text-gray-800 hover:bg-gray-200 gap-1 pr-1 font-normal">
+              {item}
+              <div
+                role="button"
+                className="rounded-full p-0.5 hover:bg-gray-300 text-gray-500 transition-colors"
+                onClick={(e) => handleRemove(e, item)}
+              >
+                <X className="h-3 w-3" />
+              </div>
+            </Badge>
+          ))}
+        </div>
+        <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''} flex-shrink-0`} />
+      </div>
+
+      {/* Dropdown Menu */}
+      {isOpen && !disabled && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg animate-in fade-in zoom-in-95 duration-100">
+          <ScrollArea className="max-h-[200px] p-1">
+            {options.length === 0 ? (
+              <div className="p-3 text-sm text-gray-500 text-center italic">No options available</div>
+            ) : (
+              options.map((option) => {
+                const isSelected = selected.includes(option);
+                // Disable item if max reached and not selected
+                const itemDisabled = max ? (!isSelected && selected.length >= max) : false;
+
+                return (
+                  <div
+                    key={option}
+                    onClick={() => !itemDisabled && handleSelect(option)}
+                    className={`flex items-center justify-between px-3 py-2 rounded-sm text-sm cursor-pointer transition-colors ${
+                      itemDisabled 
+                        ? 'opacity-50 cursor-not-allowed text-gray-400' 
+                        : isSelected 
+                          ? 'bg-purple-50 text-[#6035F3] font-medium' 
+                          : 'hover:bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    <span>{option}</span>
+                    {isSelected && <Check className="h-4 w-4 text-[#6035F3]" />}
+                  </div>
+                );
+              })
+            )}
+          </ScrollArea>
+          {max && (
+            <div className="p-2 bg-gray-50 text-xs text-gray-500 border-t border-gray-100 text-center">
+              Selected: {selected.length} / {max}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Main Component ---
 
 export function MentorshipRegistrationDialog({
   role,
@@ -60,119 +166,68 @@ export function MentorshipRegistrationDialog({
   currentPartnerNames,
 }: MentorshipRegistrationDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [tryEditMode, setTryEditMode] = useState(false); // Try edit mode for locked forms
+  const [tryEditMode, setTryEditMode] = useState(false);
+  
   const [formData, setFormData] = useState<MentorshipRegistration>({
     industry: currentRegistration?.industry || '',
     skillsets: currentRegistration?.skillsets || [],
     menteeCapacity: currentRegistration?.menteeCapacity,
     goal: currentRegistration?.goal || '',
-    mentorPreference: currentRegistration?.mentorPreference || 'no-preference', // Will be overridden on save
-    continueMenteeNames: currentRegistration?.continueMenteeNames || [], // Will be overridden on save
+    mentorPreference: currentRegistration?.mentorPreference || 'no-preference',
+    continueMenteeNames: currentRegistration?.continueMenteeNames || [],
   });
 
-  // New state for individual partner preferences (always used now)
-  const [individualPartnerPreferences, setIndividualPartnerPreferences] = useState<
-    { name: string; preference: 'continue' | 'different' | 'no-preference'; type: 'current' | 'future' }[]
-  >([]);
+  // Calculate all past partners
+  const allPastPartners = useMemo(() => {
+    const current = currentPartnerNames || [];
+    return Array.from(new Set([...current, ...MOCK_PAST_PARTNERS_POOL]));
+  }, [currentPartnerNames]);
 
-  // Reset form and initialize individual partner preferences when dialog opens or registration changes
+  // Preference Lists
+  const [selectedContinue, setSelectedContinue] = useState<string[]>([]);
+  const [selectedAvoid, setSelectedAvoid] = useState<string[]>([]);
+
+  // Init Form
   useEffect(() => {
     if (isOpen) {
-      setTryEditMode(false); // Reset try edit mode
+      setTryEditMode(false);
       setFormData({
         industry: currentRegistration?.industry || '',
         skillsets: currentRegistration?.skillsets || [],
         menteeCapacity: currentRegistration?.menteeCapacity,
         goal: currentRegistration?.goal || '',
-        mentorPreference: 'no-preference', // Placeholder, actual value derived on save
-        continueMenteeNames: [], // Placeholder, actual value derived on save
+        mentorPreference: 'no-preference',
+        continueMenteeNames: [],
       });
 
-      let partnersForTable: { name: string; type: 'current' }[] = [];
-      let placeholderPartner: { name: string; type: 'future' } | undefined;
-
-      // Determine partners for the table
-      if (currentPartnerNames && currentPartnerNames.length > 0) {
-        partnersForTable = currentPartnerNames.map(name => ({ name, type: 'current' }));
+      if (currentRegistration?.continueMenteeNames) {
+        setSelectedContinue(currentRegistration.continueMenteeNames);
       } else {
-        // No current partners, create a placeholder for global preference
-        if (role === 'mentee') {
-          placeholderPartner = { name: '我下一轮的导师偏好', type: 'future' };
-        } else { // role === 'mentor' with no current mentees
-          placeholderPartner = { name: '我下一轮的学员偏好', type: 'future' };
-        }
+        setSelectedContinue([]);
       }
-
-      const initialIndividualPrefs = (partnersForTable.length > 0 ? partnersForTable : (placeholderPartner ? [placeholderPartner] : []))
-        .map(p => {
-          let preference: 'continue' | 'different' | 'no-preference' = 'no-preference';
-
-          // Initialize preference based on currentRegistration, respecting 'future' type
-          if (p.type === 'current' && currentRegistration?.mentorPreference === 'continue') {
-            if (role === 'mentor' && currentRegistration.continueMenteeNames?.includes(p.name)) {
-              preference = 'continue';
-            } else if (role === 'mentee' && currentPartnerNames?.includes(p.name)) {
-              // For a mentee, if global preference was continue, and this is their current mentor
-              preference = 'continue';
-            } else {
-              preference = 'different'; // Global continue, but this specific current partner wasn't explicitly chosen
-            }
-          } else if (currentRegistration?.mentorPreference === 'different') {
-            preference = 'different';
-          } else if (currentRegistration?.mentorPreference === 'no-preference') {
-            preference = 'no-preference';
-          }
-
-          // '继续合作'选项在逻辑上不适用于'future'类型的占位符
-          if (p.type === 'future' && preference === 'continue') {
-            preference = 'no-preference'; // Default to no-preference if continue was somehow set
-          }
-
-          return { ...p, preference };
-        });
-
-      setIndividualPartnerPreferences(initialIndividualPrefs);
+      setSelectedAvoid([]);
     }
-  }, [isOpen, currentRegistration, role, currentPartnerNames]);
+  }, [isOpen, currentRegistration]);
 
-  const handleSkillsetToggle = (skillset: string) => {
-    if (isLocked && !tryEditMode) return;
+  // Max capacity logic
+  const maxContinueCapacity = role === 'mentee' 
+    ? 1 
+    : (formData.menteeCapacity || 1);
 
-    setFormData((prev) => {
-      const isSelected = prev.skillsets.includes(skillset);
-      if (isSelected) {
-        return {
-          ...prev,
-          skillsets: prev.skillsets.filter((s) => s !== skillset),
-        };
-      } else {
-        if (prev.skillsets.length >= 3) {
-          toast.error('Maximum of 3 skillsets allowed');
-          return prev;
-        }
-        return {
-          ...prev,
-          skillsets: [...prev.skillsets, skillset],
-        };
+  // Auto-trim selection if capacity reduces (Mentor only)
+  useEffect(() => {
+    if (role === 'mentor' && formData.menteeCapacity) {
+      if (selectedContinue.length > formData.menteeCapacity) {
+        setSelectedContinue(prev => prev.slice(0, formData.menteeCapacity));
+        toast.info(`Selection adjusted to match capacity of ${formData.menteeCapacity}`);
       }
-    });
-  };
-
-  const handlePartnerPreferenceChange = (
-    partnerName: string,
-    preference: 'continue' | 'different' | 'no-preference'
-  ) => {
-    if (isLocked && !tryEditMode) return;
-
-    setIndividualPartnerPreferences((prev) =>
-      prev.map((p) => (p.name === partnerName ? { ...p, preference } : p))
-    );
-  };
+    }
+  }, [formData.menteeCapacity, role, selectedContinue.length]);
 
   const handleSave = () => {
-    // Validation
+    // Basic Validation
     if (!formData.industry) {
-      toast.error(role === 'mentee' ? 'Please select your industry of interest' : 'Please select your current industry');
+      toast.error(role === 'mentee' ? 'Please select your industry' : 'Please select your current industry');
       return;
     }
     if (formData.skillsets.length === 0) {
@@ -184,68 +239,41 @@ export function MentorshipRegistrationDialog({
       return;
     }
     if (role === 'mentor' && !formData.menteeCapacity) {
-      toast.error('Please select the number of mentees you can guide');
+      toast.error('Please select mentee capacity');
       return;
     }
     if (formData.goal && formData.goal.length > 200) {
-      toast.error('Goal description cannot exceed 200 characters');
+      toast.error('Goal too long (max 200 chars)');
       return;
     }
 
+    // Logic for Preferences
     let finalMentorPreference: 'continue' | 'different' | 'no-preference' = 'no-preference';
-    let finalContinueMenteeNames: string[] = [];
-
-    const hasCurrentPartnersInTable = individualPartnerPreferences.some(p => p.type === 'current');
-
-    if (hasCurrentPartnersInTable) {
-      // Logic for existing partners (mentor or mentee with current mentor)
-      const selectedToContinue = individualPartnerPreferences.filter(
-        (p) => p.type === 'current' && p.preference === 'continue'
-      );
-
-      if (selectedToContinue.length > 0) {
-        finalMentorPreference = 'continue';
-        finalContinueMenteeNames = selectedToContinue.map((p) => p.name);
-      } else {
-        const allDifferent = individualPartnerPreferences.every(
-          (p) => p.type === 'current' && p.preference === 'different'
-        );
-        if (allDifferent) {
-          finalMentorPreference = 'different';
-        } else {
-          finalMentorPreference = 'no-preference';
-        }
-      }
-
-      // Specific validation for 'continue' preference for mentors:
-      if (role === 'mentor' && finalMentorPreference === 'continue' && finalContinueMenteeNames.length === 0) {
-        toast.error('请选择至少一位学员以继续合作，或选择其他偏好');
-        return;
-      }
+    if (selectedContinue.length > 0) {
+      finalMentorPreference = 'continue';
+    } else if (selectedAvoid.length > 0 && selectedAvoid.length === allPastPartners.length) {
+      finalMentorPreference = 'different';
     } else {
-      // Logic for no current partners (using the placeholder row)
-      // There should be exactly one entry of type 'future'
-      const placeholderPref = individualPartnerPreferences[0]?.preference;
-      if (placeholderPref) {
-        // 'continue' is not a valid global preference without existing partners,
-        // if it was somehow selected (though disabled), treat it as 'no-preference'
-        finalMentorPreference = placeholderPref === 'continue' ? 'no-preference' : placeholderPref;
-      } else {
-        finalMentorPreference = 'no-preference'; // Fallback
-      }
-      finalContinueMenteeNames = []; // No specific mentees to continue with
+      finalMentorPreference = 'no-preference';
     }
 
     onSave({
       ...formData,
       mentorPreference: finalMentorPreference,
-      continueMenteeNames: finalContinueMenteeNames,
+      continueMenteeNames: selectedContinue,
     });
     setIsOpen(false);
-    toast.success(isLocked ? 'Information saved' : 'Registration information updated');
+    toast.success(isLocked ? 'Information saved' : 'Registration updated');
   };
 
   const industryLabel = role === 'mentee' ? 'Industry of Interest' : 'Current Industry';
+  const targetPartnerLabel = role === 'mentee' ? 'mentor' : 'mentee'; // 动态 Label
+  const targetPartnerLabelTitle = role === 'mentee' ? 'Mentor' : 'Mentee'; // 动态 Label
+  const isFormDisabled = isLocked && !tryEditMode;
+
+  // Filter lists to prevent selecting the same person in both
+  const availableForContinue = allPastPartners.filter(p => !selectedAvoid.includes(p));
+  const availableForAvoid = allPastPartners.filter(p => !selectedContinue.includes(p));
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -268,325 +296,191 @@ export function MentorshipRegistrationDialog({
             Mentorship Registration
             {isLocked && (
               <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">
-                Cannot be modified during current round
+                Locked
               </Badge>
             )}
           </DialogTitle>
           <DialogDescription className="text-gray-600">
-            {isLocked
-              ? 'During the current Mentorship round, registration information cannot be modified. You can view your current registration information.'
-              : 'Please fill in your Mentorship participation information. This will help us match you with suitable mentors/mentees.'}
+            {isLocked ? 'Information cannot be modified currently.' : 'Fill in your Mentorship details.'}
           </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="max-h-[calc(90vh-200px)] pr-4">
           <div className="space-y-6 py-4">
-            {/* Locked Notice */}
+            
+            {/* Locked Notice & Try Edit Mode */}
             {isLocked && (
               <div className="space-y-4">
                 <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                   <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
                   <div className="text-sm text-amber-800">
                     <p className="font-semibold mb-1">Information Locked</p>
-                    <p>During the current round, registration information cannot be modified. You can modify this information after the current round ends and before the next round begins.</p>
+                    <p>Modifications are disabled during the active round.</p>
                   </div>
                 </div>
-
-                {/* Try Edit Mode Toggle */}
                 <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
                   <div className="flex items-center gap-3">
                     <Edit3 className="h-5 w-5 text-[#6035F3]" />
                     <div>
                       <p className="text-sm font-semibold text-gray-900">Try Edit Mode</p>
-                      <p className="text-xs text-gray-600">Experience form interactions without saving changes</p>
+                      <p className="text-xs text-gray-600">Preview form interactions</p>
                     </div>
                   </div>
-                  <Switch
-                    checked={tryEditMode}
-                    onCheckedChange={setTryEditMode}
-                    className="data-[state=checked]:bg-[#6035F3]"
-                  />
+                  <Switch checked={tryEditMode} onCheckedChange={setTryEditMode} className="data-[state=checked]:bg-[#6035F3]" />
                 </div>
-
-                {/* Try Edit Mode Active Notice */}
-                {tryEditMode && (
-                  <div className="flex items-start gap-2 p-3 bg-blue-100 border border-blue-300 rounded-lg animate-in fade-in duration-200">
-                    <AlertCircle className="h-4 w-4 text-blue-700 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-blue-900">
-                      <strong>Try Edit Mode Active:</strong> You can now interact with the form. Changes will not be saved - this is for preview only.
-                    </p>
-                  </div>
-                )}
               </div>
             )}
 
-            {/* Industry Selection */}
-            {/* Industry Selection — mentee only */}
+            {/* Industry */}
             {role === 'mentee' && (
               <div className="space-y-3">
-                <Label className="text-sm font-semibold text-gray-700">
-                  {industryLabel} <span className="text-red-500">*</span>
-                </Label>
+                <Label className="text-sm font-semibold text-gray-700">{industryLabel} <span className="text-red-500">*</span></Label>
                 <RadioGroup
                   value={formData.industry}
-                  onValueChange={(value) => (!isLocked || tryEditMode) && setFormData({ ...formData, industry: value })}
-                  disabled={isLocked && !tryEditMode}
+                  onValueChange={(value) => !isFormDisabled && setFormData({ ...formData, industry: value })}
+                  disabled={isFormDisabled}
                   className="space-y-2"
                 >
-                  {INDUSTRIES.map((industry) => {
-                    const isSelected = formData.industry === industry;
-                    return (
-                      <div
-                        key={industry}
-                        className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${isSelected && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
-                          }`}
-                      >
-                        <RadioGroupItem value={industry} id={`industry-${industry}`} disabled={isLocked && !tryEditMode} />
-                        <Label
-                          htmlFor={`industry-${industry}`}
-                          className={`text-sm cursor-pointer ${isSelected && (isLocked && !tryEditMode)
-                            ? 'text-[#6035F3] font-semibold'
-                            : (isLocked && !tryEditMode)
-                              ? 'text-gray-400'
-                              : 'text-gray-700'
-                            }`}
-                        >
-                          {industry}
-                        </Label>
-                      </div>
-                    );
-                  })}
+                  {INDUSTRIES.map((industry) => (
+                    <div key={industry} className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${formData.industry === industry && isFormDisabled ? 'bg-purple-50 border border-purple-200' : ''}`}>
+                      <RadioGroupItem value={industry} id={`ind-${industry}`} disabled={isFormDisabled} />
+                      <Label htmlFor={`ind-${industry}`} className="text-sm cursor-pointer text-gray-700">{industry}</Label>
+                    </div>
+                  ))}
                 </RadioGroup>
               </div>
             )}
 
-            {/* Skillsets Selection */}
+            {/* Skillsets */}
             <div className="space-y-3">
-              <Label className="text-sm font-semibold text-gray-700">
-                Key skillsets you hope to improve through Mentorship (select up to 3){' '}
-                <span className="text-red-500">*</span>
-              </Label>
-              <div className="space-y-2">
+              <Label className="text-sm font-semibold text-gray-700">Key skillsets (max 3) <span className="text-red-500">*</span></Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {SKILLSETS.map((skillset) => {
                   const isSelected = formData.skillsets.includes(skillset);
+                  const handleToggle = () => {
+                     if (isFormDisabled) return;
+                     if (isSelected) setFormData({ ...formData, skillsets: formData.skillsets.filter(s => s !== skillset) });
+                     else {
+                       if (formData.skillsets.length >= 3) { toast.error('Max 3 skillsets'); return; }
+                       setFormData({ ...formData, skillsets: [...formData.skillsets, skillset] });
+                     }
+                  };
                   return (
-                    <div
-                      key={skillset}
-                      className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${isSelected && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
-                        }`}
-                    >
-                      <Checkbox
-                        id={`skillset-${skillset}`}
-                        checked={isSelected}
-                        onCheckedChange={() => handleSkillsetToggle(skillset)}
-                        disabled={isLocked && !tryEditMode}
-                      />
-                      <Label
-                        htmlFor={`skillset-${skillset}`}
-                        className={`text-sm cursor-pointer ${isSelected && (isLocked && !tryEditMode)
-                          ? 'text-[#6035F3] font-semibold'
-                          : (isLocked && !tryEditMode)
-                            ? 'text-gray-400'
-                            : 'text-gray-700'
-                          }`}
-                      >
-                        {skillset}
-                      </Label>
+                    <div key={skillset} className={`flex items-center space-x-2 p-2 rounded-lg border transition-colors ${isSelected ? 'border-purple-200 bg-purple-50' : 'border-transparent hover:bg-gray-50'}`}>
+                      <Checkbox id={`skill-${skillset}`} checked={isSelected} onCheckedChange={handleToggle} disabled={isFormDisabled} />
+                      <Label htmlFor={`skill-${skillset}`} className="text-sm cursor-pointer text-gray-700">{skillset}</Label>
                     </div>
                   );
                 })}
               </div>
-              <p className="text-xs text-gray-500">
-                Selected: {formData.skillsets.length} / 3
-              </p>
             </div>
 
-            {/* Mentor-only: Mentee Capacity */}
+            {/* Capacity */}
             {role === 'mentor' && (
               <div className="space-y-3">
-                <Label className="text-sm font-semibold text-gray-700">
-                  How many mentees can you guide in this round? <span className="text-red-500">*</span>
-                </Label>
+                <Label className="text-sm font-semibold text-gray-700">Max Mentees <span className="text-red-500">*</span></Label>
                 <RadioGroup
                   value={formData.menteeCapacity?.toString()}
-                  onValueChange={(value) =>
-                    (!isLocked || tryEditMode) && setFormData({ ...formData, menteeCapacity: parseInt(value) })
-                  }
-                  disabled={isLocked && !tryEditMode}
+                  onValueChange={(value) => !isFormDisabled && setFormData({ ...formData, menteeCapacity: parseInt(value) })}
+                  disabled={isFormDisabled}
                   className="space-y-2"
                 >
-                  {MENTEE_CAPACITIES.map((option) => {
-                    const isSelected = formData.menteeCapacity === option.value;
-                    return (
-                      <div
-                        key={option.value}
-                        className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${isSelected && (isLocked && !tryEditMode) ? 'bg-purple-50 border border-purple-200' : ''
-                          }`}
-                      >
-                        <RadioGroupItem
-                          value={option.value.toString()}
-                          id={`capacity-${option.value}`}
-                          disabled={isLocked && !tryEditMode}
-                        />
-                        <Label
-                          htmlFor={`capacity-${option.value}`}
-                          className={`text-sm cursor-pointer ${isSelected && (isLocked && !tryEditMode)
-                            ? 'text-[#6035F3] font-semibold'
-                            : (isLocked && !tryEditMode)
-                              ? 'text-gray-400'
-                              : 'text-gray-700'
-                            }`}
-                        >
-                          {option.label}
-                        </Label>
-                      </div>
-                    );
-                  })}
+                  {MENTEE_CAPACITIES.map((opt) => (
+                    <div key={opt.value} className={`flex items-center space-x-2 p-2 rounded-lg ${formData.menteeCapacity === opt.value && isFormDisabled ? 'bg-purple-50 border border-purple-200' : ''}`}>
+                      <RadioGroupItem value={opt.value.toString()} id={`cap-${opt.value}`} disabled={isFormDisabled} />
+                      <Label htmlFor={`cap-${opt.value}`} className="text-sm cursor-pointer text-gray-700">{opt.label}</Label>
+                    </div>
+                  ))}
                 </RadioGroup>
               </div>
             )}
 
             {/* Goal */}
             <div className="space-y-3">
-              <Label htmlFor="goal" className="text-sm font-semibold text-gray-700">
-                Current Round Mentorship Goal (optional, max 200 characters)
-              </Label>
-              <div
-                className={`${(isLocked && !tryEditMode) && formData.goal ? 'bg-purple-50 border-2 border-purple-200 rounded-lg p-4' : ''
-                  }`}
-              >
-                <Textarea
-                  id="goal"
-                  placeholder="e.g., I hope to improve my technical interview skills and learn about the latest industry trends in this round..."
-                  value={formData.goal}
-                  onChange={(e) => (!isLocked || tryEditMode) && setFormData({ ...formData, goal: e.target.value })}
-                  disabled={isLocked && !tryEditMode}
-                  className={`min-h-[100px] resize-none ${(isLocked && !tryEditMode) && formData.goal
-                    ? 'bg-transparent border-none text-[#6035F3] font-medium'
-                    : 'border-gray-300 focus:border-[#6035F3] focus:ring-[#6035F3]'
-                    }`}
-                  maxLength={200}
-                />
-              </div>
-              <p className="text-xs text-gray-500 text-right">
-                {formData.goal?.length || 0} / 200
-              </p>
+              <Label htmlFor="goal" className="text-sm font-semibold text-gray-700">Goal (Optional)</Label>
+              <Textarea
+                id="goal"
+                placeholder="Briefly describe your goals..."
+                value={formData.goal}
+                onChange={(e) => !isFormDisabled && setFormData({ ...formData, goal: e.target.value })}
+                disabled={isFormDisabled}
+                className="min-h-[80px] resize-none"
+                maxLength={200}
+              />
             </div>
 
-            {/* Mentor/Mentee Preference for Next Round - Always table-based */}
-            <div className="space-y-3">
-              <Label className="text-sm font-semibold text-gray-700">
-                {/* 动态显示标题 */}
-                {individualPartnerPreferences.some(p => p.type === 'current')
-                  ? (role === 'mentee'
-                    ? 'Do you want to continue working with your current mentor, or be matched with a different mentor?'
-                    : 'What is your next-round preference regarding your current mentee?')
-                  : (role === 'mentee'
-                    ? 'What is your next-round mentor preference?'
-                    : 'What is your next-round mentee preference?')}
-
-              </Label>
-              <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg mb-3">
-                <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-blue-800">
-                  <strong>Note:</strong> This preference will only take effect if both you and your current {role === 'mentee' ? 'mentor' : 'mentee(s)'} register for the next round.
+            {/* PARTNER PREFERENCES */}
+            <div className="space-y-6 pt-4">
+              <h3 className="text-base font-semibold text-gray-900">{targetPartnerLabelTitle} Preferences</h3>
+              
+              {/* NEW: No Preference Hint - Dynamic Role */}
+              <div className="flex items-start gap-2 p-3 bg-blue-50 text-blue-700 rounded-md text-sm border border-blue-100">
+                <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <p>
+                  Leaving these fields empty indicates you have <strong>no preference</strong> and are open to matching with any suitable {targetPartnerLabel}.
                 </p>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {/* 动态显示列名 */}
-                        {individualPartnerPreferences.some(p => p.type === 'current')
-                          ? (role === 'mentee' ? 'Mentor' : 'Mentee')
-                          : '偏好类型' // For placeholder row
-                        }
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Continue
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Different
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        No Preference
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {individualPartnerPreferences.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center italic">
-                          无可用选项。请联系管理员。
-                        </td>
-                      </tr>
-                    ) : (
-                      individualPartnerPreferences.map((partner) => (
-                        <tr key={partner.name}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {partner.name}
-                          </td>
-                          {/* Each row has its own RadioGroup */}
-                          <RadioGroup
-                            value={partner.preference}
-                            onValueChange={(value: 'continue' | 'different' | 'no-preference') =>
-                              handlePartnerPreferenceChange(partner.name, value)
-                            }
-                            disabled={isLocked && !tryEditMode}
-                            className="flex w-full" // Use flex to align radio items horizontally within the table row
-                          >
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                              <RadioGroupItem
-                                value="continue"
-                                id={`continue-${partner.name}`}
-                                disabled={isLocked && !tryEditMode || partner.type === 'future'} // Disable for 'future' type
-                                className="mx-auto"
-                              />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                              <RadioGroupItem
-                                value="different"
-                                id={`different-${partner.name}`}
-                                disabled={isLocked && !tryEditMode}
-                                className="mx-auto"
-                              />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                              <RadioGroupItem
-                                value="no-preference"
-                                id={`no-preference-${partner.name}`}
-                                disabled={isLocked && !tryEditMode}
-                                className="mx-auto"
-                              />
-                            </td>
-                          </RadioGroup>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+              {/* Question A: Continue */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-gray-700 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="h-4 w-4 text-green-600" />
+                    <span>Who do you <span className="text-green-700 font-bold">WANT</span> to continue with?</span>
+                  </div>
+                  <span className="text-xs font-normal text-gray-500">
+                    Max: {maxContinueCapacity}
+                  </span>
+                </Label>
+                
+                <MultiSelect 
+                  options={availableForContinue}
+                  selected={selectedContinue}
+                  onChange={setSelectedContinue}
+                  placeholder="Select partners..."
+                  max={maxContinueCapacity}
+                  disabled={isFormDisabled}
+                  label="partners"
+                />
+                
+                <p className="text-xs text-gray-500">
+                  {role === 'mentee' 
+                    ? 'Note: You can only match with 1 mentor.' 
+                    : `Note: Limited to ${maxContinueCapacity} based on your capacity.`}
+                </p>
+              </div>
+
+              {/* Question B: Avoid */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <UserX className="h-4 w-4 text-red-600" />
+                  <span>Who do you <span className="text-red-600 font-bold">NOT</span> want to continue with?</span>
+                </Label>
+                
+                <MultiSelect 
+                  options={availableForAvoid}
+                  selected={selectedAvoid}
+                  onChange={setSelectedAvoid}
+                  placeholder="Select partners to avoid..."
+                  disabled={isFormDisabled}
+                  label="partners"
+                />
+                
+                <p className="text-xs text-gray-500">
+                  Select partners you prefer not to match with. No limit.
+                </p>
               </div>
             </div>
+
           </div>
         </ScrollArea>
 
         <DialogFooter className="gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setIsOpen(false)}
-            className="border-gray-300 text-gray-700 hover:bg-gray-50"
-          >
+          <Button type="button" variant="outline" onClick={() => setIsOpen(false)} className="border-gray-300">
             {isLocked ? 'Close' : 'Cancel'}
           </Button>
           {!isLocked && (
-            <Button
-              type="button"
-              onClick={handleSave}
-              className="bg-[#6035F3] hover:bg-[#4A28C4] text-white shadow-md"
-            >
+            <Button type="button" onClick={handleSave} className="bg-[#6035F3] hover:bg-[#4A28C4] text-white">
               Save
             </Button>
           )}
