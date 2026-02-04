@@ -232,7 +232,7 @@ export function MentorshipCard({ participations }: MentorshipCardProps) {
                   {/* Meeting Stats */}
                   <div className="grid grid-cols-3 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
                     <div className="text-center">
-                      <div className="text-sm text-gray-600 mb-1">Total Meetings</div>
+                      <div className="text-sm text-gray-600 mb-1">Required Meetings</div>
                       <div className="text-2xl">{stats.totalMeetings}</div>
                     </div>
                     <div className="text-center">
@@ -268,22 +268,14 @@ export function MentorshipCard({ participations }: MentorshipCardProps) {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {meeting.isCompleted ? (
+                          {/*   {meeting.isCompleted ? (
                               <CheckCircle2 className="h-5 w-5 text-green-600" />
                             ) : (
                               <XCircle className="h-5 w-5 text-gray-400" />
                             )}
-
-                            {/* Delete button */}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => handleDeleteMeeting(participation.roundId, meeting.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                                */}
                           </div>
+                        
                         </div>
                       ))}
                     </div>

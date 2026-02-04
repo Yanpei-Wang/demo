@@ -17,7 +17,10 @@ export interface ActivityMetrics {
 export interface MentorshipMeeting {
   id: string;
   date: string;
-  time: string;
+  time: string; // Legacy field or display string
+  startTime?: string;
+  endTime?: string;
+  timezone?: string;
   duration: number; // in minutes
   partnerEmail: string; // Email of the mentor/mentee
   partnerName: string; // Name of the mentor/mentee
@@ -29,8 +32,17 @@ export interface MentorshipRegistration {
   skillsets: string[]; // Up to 3 skillsets to focus on
   menteeCapacity?: number; // Only for mentors: how many mentees they can mentor
   goal?: string; // Personal goal for this round (max 200 chars)
-  mentorPreference?: 'continue' | 'different' | 'no-preference'; // Preference for next round mentor/mentee matching
-  continueMenteeNames?: string[]; // For mentors only: specific mentee names they want to continue with
+  // Question 1: Continue with current round partners?
+  continueCurrentPartners?: boolean; // Whether to continue with current partners
+  discontinuePartnerNames?: string[]; // Partners from current round they don't want to continue with
+  // Question 2: Preferred historical partners for next round
+  preferredHistoricalPartnerNames?: string[]; // Historical partners they'd like to continue with in next round
+}
+
+export interface PartnerDetails {
+  name: string;
+  email: string;
+  matchReason: string;
 }
 
 export interface MentorshipParticipation {
@@ -41,6 +53,7 @@ export interface MentorshipParticipation {
   endDate: string;
   status: 'active' | 'completed' | 'pending';
   partnerNames: string[]; // For mentors: array of mentee names; For mentees: single mentor name in array
+  partnerDetails?: PartnerDetails[];
   meetings: MentorshipMeeting[];
   registration?: MentorshipRegistration; // Registration info for this round
 }

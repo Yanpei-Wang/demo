@@ -4,10 +4,11 @@ import { ActivityMetricsCard } from './ActivityMetricsCard';
 import { MentorshipCard } from './MentorshipCard';
 import { MeetingManagementDialog } from './MeetingManagementDialog';
 import { MentorshipRegistrationDialog } from './MentorshipRegistrationDialog';
+import { MatchingResultModal } from './MatchingResultModal';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Target, ExternalLink } from 'lucide-react';
+import { Target, ExternalLink, Users } from 'lucide-react';
 import { mentorshipRounds } from '../utils/mockData';
 
 interface PersonalDashboardProps {
@@ -16,6 +17,7 @@ interface PersonalDashboardProps {
 
 export function PersonalDashboard({ userData }: PersonalDashboardProps) {
   const [participations, setParticipations] = useState(userData.mentorshipParticipation);
+  const [isMatchingModalOpen, setIsMatchingModalOpen] = useState(false);
 
   const handleScheduleMeeting = (
     partnerEmail: string,
@@ -83,8 +85,8 @@ export function PersonalDashboard({ userData }: PersonalDashboardProps) {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          {/* <h1 className="text-3xl mb-2">Personal Dashboard</h1> */}
-          <h1 className="text-gray-600">👏 Welcome, {userData.name}</h1>
+          <h1 className="text-3xl mb-2">Personal Dashboard</h1>
+          <p className="text-gray-600">Welcome back, {userData.name}</p>
         </div>
         
         <MeetingManagementDialog
@@ -123,6 +125,15 @@ export function PersonalDashboard({ userData }: PersonalDashboardProps) {
                   onSave={handleSaveRegistration}
                   currentPartnerNames={activeParticipation.partnerNames}
                 />
+
+                <Button
+                  variant="outline"
+                  className="border-[#6035F3] text-[#6035F3] hover:bg-purple-50"
+                  onClick={() => setIsMatchingModalOpen(true)}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  View Matching Results
+                </Button>
                 
                 <Button
                   variant="outline"
@@ -147,6 +158,15 @@ export function PersonalDashboard({ userData }: PersonalDashboardProps) {
       <MentorshipCard participations={participations} />
       
       <ActivityMetricsCard metrics={userData.activityMetrics} />
+
+      {activeParticipation && (
+        <MatchingResultModal
+          open={isMatchingModalOpen}
+          onOpenChange={setIsMatchingModalOpen}
+          partners={activeParticipation.partnerDetails || []}
+          userRole={activeParticipation.role}
+        />
+      )}
     </div>
   );
 }

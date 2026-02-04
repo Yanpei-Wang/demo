@@ -3,10 +3,11 @@ import { UserData, MentorshipParticipation, MentorshipRegistration } from '../ty
 import { MentorshipCard } from './MentorshipCard';
 import { MeetingManagementDialog } from './MeetingManagementDialog';
 import { MentorshipRegistrationDialog } from './MentorshipRegistrationDialog';
+import { MatchingResultModal } from './MatchingResultModal';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { GraduationCap, Target, ExternalLink } from 'lucide-react';
+import { GraduationCap, Target, ExternalLink, Users } from 'lucide-react';
 import { mentorshipRounds } from '../utils/mockData';
 
 interface MentorshipOnlyDashboardProps {
@@ -15,6 +16,7 @@ interface MentorshipOnlyDashboardProps {
 
 export function MentorshipOnlyDashboard({ userData }: MentorshipOnlyDashboardProps) {
   const [participations, setParticipations] = useState(userData.mentorshipParticipation);
+  const [isMatchingModalOpen, setIsMatchingModalOpen] = useState(false);
 
   const handleScheduleMeeting = (
     partnerEmail: string,
@@ -128,6 +130,15 @@ export function MentorshipOnlyDashboard({ userData }: MentorshipOnlyDashboardPro
                   onSave={handleSaveRegistration}
                   currentPartnerNames={activeParticipation.partnerNames}
                 />
+
+                <Button
+                  variant="outline"
+                  className="border-[#6035F3] text-[#6035F3] hover:bg-purple-50"
+                  onClick={() => setIsMatchingModalOpen(true)}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  View Matching Results
+                </Button>
                 
                 <Button
                   variant="outline"
@@ -150,6 +161,15 @@ export function MentorshipOnlyDashboard({ userData }: MentorshipOnlyDashboardPro
       )}
 
       <MentorshipCard participations={participations} />
+
+      {activeParticipation && (
+        <MatchingResultModal
+          open={isMatchingModalOpen}
+          onOpenChange={setIsMatchingModalOpen}
+          partners={activeParticipation.partnerDetails || []}
+          userRole={activeParticipation.role}
+        />
+      )}
     </div>
   );
 }

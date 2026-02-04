@@ -162,7 +162,7 @@ export function MentorshipCard({ participations }: MentorshipCardProps) {
                   {/* Meeting Stats */}
                   <div className="grid grid-cols-3 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
                     <div className="text-center">
-                      <div className="text-sm text-gray-600 mb-1">Total Meetings</div>
+                      <div className="text-sm text-gray-600 mb-1">Required Meetings</div>
                       <div className="text-2xl">{stats.totalMeetings}</div>
                     </div>
                     <div className="text-center">

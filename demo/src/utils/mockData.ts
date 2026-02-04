@@ -1,4 +1,4 @@
-import { UserData, UserRole, MentorshipMeeting, MentorshipRound } from '../types/dashboard';
+import { UserData, UserRole, MentorshipMeeting, MentorshipRound, PartnerDetails } from '../types/dashboard';
 
 const generateMeetings = (startDateStr: string, partnerName: string, isCompleted: boolean = false): MentorshipMeeting[] => {
   const meetings: MentorshipMeeting[] = [];
@@ -15,11 +15,22 @@ const generateMeetings = (startDateStr: string, partnerName: string, isCompleted
     const hours = Math.floor(Math.random() * 4) + 14; // 14:00-17:00
     const minutes = Math.random() > 0.5 ? '00' : '30';
     const duration = Math.random() > 0.5 ? 30 : 60; // 30 or 60 minutes
+    const startTime = `${hours.toString().padStart(2, '0')}:${minutes}`;
+    
+    // Calculate end time
+    const startTotalMinutes = hours * 60 + (minutes === '30' ? 30 : 0);
+    const endTotalMinutes = startTotalMinutes + duration;
+    const endHours = Math.floor(endTotalMinutes / 60);
+    const endMinutes = endTotalMinutes % 60;
+    const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
     
     meetings.push({
       id: `meeting-${i + 1}`,
       date: meetingDate.toISOString().split('T')[0],
-      time: `${hours.toString().padStart(2, '0')}:${minutes}`,
+      time: `${startTime} - ${endTime}`,
+      startTime: startTime,
+      endTime: endTime,
+      timezone: 'America/Los_Angeles',
       duration: duration,
       partnerEmail: partnerEmail,
       partnerName: partnerName,
@@ -85,6 +96,16 @@ export const generateMockUserData = (role: UserRole, isCurrentUser: boolean = fa
       return [mentorNames[Math.floor(Math.random() * mentorNames.length)]];
     }
   };
+
+  const getPartnerDetails = (names: string[], mentorshipRole: 'mentor' | 'mentee'): PartnerDetails[] => {
+    return names.map(name => ({
+      name,
+      email: `${name.toLowerCase().replace(/\s/g, '.')}@circlecat.org`,
+      matchReason: mentorshipRole === 'mentor' 
+        ? "Matched based on shared interest in Frontend Development and Career Growth." 
+        : "Matched based on your goal to improve Technical Skills and their expertise in Large Scale Systems."
+    }));
+  };
   
   // Current round (2024 Fall) - everyone has this
   const role2024Fall = getMentorshipRole();
@@ -97,6 +118,7 @@ export const generateMockUserData = (role: UserRole, isCurrentUser: boolean = fa
     endDate: '2024-12-31',
     status: 'active' as const,
     partnerNames: partners2024Fall,
+    partnerDetails: getPartnerDetails(partners2024Fall, role2024Fall),
     meetings: generateMeetings('2024-09-01', partners2024Fall[0], false),
     registration: {
       industry: role2024Fall === 'mentor' ? 'SWE' : 'UI / UX',
@@ -120,6 +142,7 @@ export const generateMockUserData = (role: UserRole, isCurrentUser: boolean = fa
       endDate: '2024-06-30',
       status: 'completed' as const,
       partnerNames: partners2024Spring,
+      partnerDetails: getPartnerDetails(partners2024Spring, role2024Spring),
       meetings: generateMeetings('2024-03-01', partners2024Spring[0], true),
     });
   }
@@ -136,6 +159,7 @@ export const generateMockUserData = (role: UserRole, isCurrentUser: boolean = fa
       endDate: '2023-12-31',
       status: 'completed' as const,
       partnerNames: partners2023Fall,
+      partnerDetails: getPartnerDetails(partners2023Fall, role2023Fall),
       meetings: generateMeetings('2023-09-01', partners2023Fall[0], true),
     });
   }
