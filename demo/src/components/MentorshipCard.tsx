@@ -1,10 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { MentorshipParticipation } from '../types/dashboard';
-import { GraduationCap, User, Calendar, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { MentorshipParticipation, MentorshipMeeting } from '../types/dashboard';
+import { GraduationCap, User, Calendar, CheckCircle2, XCircle, Clock, Plus, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { mentorshipRounds } from '../utils/mockData';
+import { MeetingSubmissionModal } from './MeetingSubmissionModal';
 
 interface MentorshipCardProps {
   participations: MentorshipParticipation[];
@@ -12,6 +14,68 @@ interface MentorshipCardProps {
 
 export function MentorshipCard({ participations }: MentorshipCardProps) {
   const [selectedRound, setSelectedRound] = useState(mentorshipRounds[0].id);
+  const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
+  const [localParticipations, setLocalParticipations] = useState<MentorshipParticipation[]>(participations);
+
+  // Sync with props if they change
+  useEffect(() => {
+    setLocalParticipations(participations);
+  }, [participations]);
+
+  const handleMeetingSubmit = (data: { timezone: string; slots: { date: Date; startTime: string; endTime: string }[] }) => {
+
+    setLocalParticipations(prev => prev.map(p => {
+      if (p.roundId === selectedRound) {
+        // Create new meeting objects
+        const newMeetings: MentorshipMeeting[] = data.slots.map(slot => {
+          const meetingDate = slot.date.toISOString().split('T')[0];
+
+          // Calculate duration in minutes
+          const startParts = slot.startTime.split(':').map(Number);
+          const endParts = slot.endTime.split(':').map(Number);
+          const startMinutes = startParts[0] * 60 + startParts[1];
+          const endMinutes = endParts[0] * 60 + endParts[1];
+          let duration = endMinutes - startMinutes;
+          if (duration < 0) duration += 24 * 60; // Handle overnight
+
+          return {
+            id: `meeting-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            date: meetingDate,
+            time: `${slot.startTime} - ${slot.endTime}`, // Display string
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            timezone: data.timezone,
+            duration: duration,
+            partnerEmail: "partner@example.com", // Placeholder
+            partnerName: p.partnerNames.length > 0 ? p.partnerNames[0] : "Partner",
+            isCompleted: true,
+          };
+        });
+
+        return {
+          ...p,
+          meetings: [...newMeetings, ...p.meetings] // Add all new meetings to top
+        };
+      }
+      return p;
+    }));
+
+    setIsMeetingModalOpen(false);
+  };
+
+  const handleDeleteMeeting = (roundId: string, meetingId: string) => {
+    if (confirm("Are you sure you want to delete this meeting record?")) {
+      setLocalParticipations(prev => prev.map(p => {
+        if (p.roundId === roundId) {
+          return {
+            ...p,
+            meetings: p.meetings.filter(m => m.id !== meetingId)
+          };
+        }
+        return p;
+      }));
+    }
+  };
 
   // Get the selected round details
   const selectedRoundDetails = useMemo(() => {
@@ -33,8 +97,8 @@ export function MentorshipCard({ participations }: MentorshipCardProps) {
 
   // Filter participations based on selected round
   const filteredParticipations = useMemo(() => {
-    return participations.filter(p => p.roundId === selectedRound);
-  }, [participations, selectedRound]);
+    return localParticipations.filter(p => p.roundId === selectedRound);
+  }, [localParticipations, selectedRound]);
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -42,13 +106,13 @@ export function MentorshipCard({ participations }: MentorshipCardProps) {
       completed: 'secondary',
       pending: 'outline',
     };
-    
+
     const labels: Record<string, string> = {
       active: 'Active',
       completed: 'Completed',
       pending: 'Pending',
     };
-    
+
     return <Badge variant={variants[status] || 'default'}>{labels[status] || status}</Badge>;
   };
 
@@ -60,7 +124,7 @@ export function MentorshipCard({ participations }: MentorshipCardProps) {
     const totalMeetings = participation.meetings.length;
     const completedMeetings = participation.meetings.filter(m => m.isCompleted).length;
     const completionRate = totalMeetings > 0 ? Math.round((completedMeetings / totalMeetings) * 100) : 0;
-    
+
     return {
       totalMeetings,
       completedMeetings,
@@ -73,22 +137,28 @@ export function MentorshipCard({ participations }: MentorshipCardProps) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Mentorship Participation</CardTitle>
-          <Select value={selectedRound} onValueChange={setSelectedRound}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {mentorshipRounds.map((round) => {
-                const isFuture = new Date(round.startDate) > new Date();
-                const isCurrent = round.status === 'active' && !isFuture;
-                return (
-                  <SelectItem key={round.id} value={round.id}>
-                    {round.name} {isCurrent && '(Current)'} {isFuture && '(Upcoming)'}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setIsMeetingModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Submit Meeting Info
+            </Button>
+            <Select value={selectedRound} onValueChange={setSelectedRound}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {mentorshipRounds.map((round) => {
+                  const isFuture = new Date(round.startDate) > new Date();
+                  const isCurrent = round.status === 'active' && !isFuture;
+                  return (
+                    <SelectItem key={round.id} value={round.id}>
+                      {round.name} {isCurrent && '(Current)'} {isFuture && '(Upcoming)'}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -132,7 +202,7 @@ export function MentorshipCard({ participations }: MentorshipCardProps) {
           <div className="space-y-6">
             {filteredParticipations.map((participation, index) => {
               const stats = calculateStats(participation);
-              
+
               return (
                 <div key={index} className="border-b last:border-b-0 pb-6 last:pb-0">
                   <div className="flex items-start justify-between mb-4">
@@ -180,33 +250,39 @@ export function MentorshipCard({ participations }: MentorshipCardProps) {
                     <h5 className="text-sm text-gray-600 mb-2">Meeting List</h5>
                     <div className="space-y-2 max-h-64 overflow-y-auto">
                       {participation.meetings.map((meeting) => (
-                        <div 
-                          key={meeting.id} 
-                          className={`flex items-center justify-between p-3 rounded-lg border ${
-                            meeting.isCompleted 
-                              ? 'bg-green-50 border-green-200' 
+                        <div
+                          key={meeting.id}
+                          className={`flex items-center justify-between p-3 rounded-lg border ${meeting.isCompleted
+                              ? 'bg-green-50 border-green-200'
                               : 'bg-gray-50 border-gray-200'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-3">
                             <Calendar className="h-4 w-4 text-gray-500" />
                             <div>
                               <div className="text-sm">{meeting.date}</div>
-                              <div className="text-xs text-gray-600">{meeting.time}</div>
+                              <div className="text-xs text-gray-600">
+                                {meeting.time}
+                                {meeting.timezone && ` (${meeting.timezone.split('/')[1] || meeting.timezone})`}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             {meeting.isCompleted ? (
-                              <>
-                                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                                <span className="text-sm text-green-600">Completed</span>
-                              </>
+                              <CheckCircle2 className="h-5 w-5 text-green-600" />
                             ) : (
-                              <>
-                                <XCircle className="h-5 w-5 text-gray-400" />
-                                <span className="text-sm text-gray-500">Not Completed</span>
-                              </>
+                              <XCircle className="h-5 w-5 text-gray-400" />
                             )}
+
+                            {/* Delete button */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleDeleteMeeting(participation.roundId, meeting.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       ))}
@@ -218,6 +294,11 @@ export function MentorshipCard({ participations }: MentorshipCardProps) {
           </div>
         )}
       </CardContent>
+      <MeetingSubmissionModal
+        open={isMeetingModalOpen}
+        onOpenChange={setIsMeetingModalOpen}
+        onSubmit={handleMeetingSubmit}
+      />
     </Card>
   );
 }
