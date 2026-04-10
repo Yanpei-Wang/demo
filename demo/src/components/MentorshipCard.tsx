@@ -6,6 +6,7 @@ import { MentorshipParticipation, MentorshipMeeting } from '../types/dashboard';
 import { GraduationCap, User, Calendar, CheckCircle2, XCircle, Clock, Plus, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { mentorshipRounds } from '../utils/mockData';
+import { getRoundStatus } from '../utils/roundStatus';
 import { MeetingSubmissionModal } from './MeetingSubmissionModal';
 
 interface MentorshipCardProps {
@@ -13,7 +14,8 @@ interface MentorshipCardProps {
 }
 
 export function MentorshipCard({ participations }: MentorshipCardProps) {
-  const [selectedRound, setSelectedRound] = useState(mentorshipRounds[0].id);
+  const activeRoundId = mentorshipRounds.find(r => getRoundStatus(r) === 'active')?.id ?? mentorshipRounds[0].id;
+  const [selectedRound, setSelectedRound] = useState(activeRoundId);
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
   const [localParticipations, setLocalParticipations] = useState<MentorshipParticipation[]>(participations);
 
@@ -85,9 +87,7 @@ export function MentorshipCard({ participations }: MentorshipCardProps) {
   // Check if the selected round is a future round
   const isFutureRound = useMemo(() => {
     if (!selectedRoundDetails) return false;
-    const currentDate = new Date();
-    const roundStartDate = new Date(selectedRoundDetails.startDate);
-    return roundStartDate > currentDate;
+    return getRoundStatus(selectedRoundDetails) === 'upcoming';
   }, [selectedRoundDetails]);
 
   const formatDate = (dateString: string) => {
@@ -147,24 +147,28 @@ export function MentorshipCard({ participations }: MentorshipCardProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {mentorshipRounds.map((round) => {
-                  const isFuture = new Date(round.startDate) > new Date();
-                  const isCurrent = round.status === 'active' && !isFuture;
-                  return (
-                    <SelectItem key={round.id} value={round.id}>
-                      {round.name} {isCurrent && '(Current)'} {isFuture && '(Upcoming)'}
-                    </SelectItem>
-                  );
-                })}
+                {[...mentorshipRounds]
+                  .sort((a, b) => {
+                    const order = { active: 0, upcoming: 1, completed: 2 };
+                    return order[getRoundStatus(a)] - order[getRoundStatus(b)];
+                  })
+                  .map((round) => {
+                    const status = getRoundStatus(round);
+                    return (
+                      <SelectItem key={round.id} value={round.id}>
+                        {round.name} {status === 'active' && '(Current)'} {status === 'upcoming' && '(Upcoming)'}
+                      </SelectItem>
+                    );
+                  })}
               </SelectContent>
             </Select>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        {/* Future Round Notice */}
+        {/* Upcoming Round Notice */}
         {isFutureRound && selectedRoundDetails && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-white border border-amber-200 rounded-lg">
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
             <div className="flex items-start gap-3">
               <div className="p-2 bg-amber-100 rounded-lg flex-shrink-0">
                 <Clock className="h-5 w-5 text-amber-600" />
@@ -172,14 +176,14 @@ export function MentorshipCard({ participations }: MentorshipCardProps) {
               <div className="flex-1">
                 <h4 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
                   Next Round Mentorship Starting Soon
-                  <Badge className="bg-amber-100 text-amber-800 border-amber-200">
+                  <Badge className="bg-amber-100 text-amber-600 border-amber-200">
                     {selectedRoundDetails.name}
                   </Badge>
                 </h4>
                 <div className="text-sm text-gray-700 space-y-1">
                   <p className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-amber-600" />
-                    Start Date: {formatDate(selectedRoundDetails.startDate)}
+                    Start Date: {formatDate(selectedRoundDetails.phases.signUp.adminAction)}
                   </p>
                   <p className="text-gray-600 mt-2">
                     The next round of mentorship has not started yet. Please complete your registration information before the round begins.
@@ -190,7 +194,7 @@ export function MentorshipCard({ participations }: MentorshipCardProps) {
           </div>
         )}
 
-        {filteredParticipations.length === 0 ? (
+        {isFutureRound || filteredParticipations.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <GraduationCap className="h-12 w-12 mx-auto mb-3 text-gray-400" />
             <p>You have not participated in the mentorship program in this round</p>

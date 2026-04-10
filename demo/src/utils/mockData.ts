@@ -114,12 +114,10 @@ export const generateMockUserData = (role: UserRole, isCurrentUser: boolean = fa
     programName: 'Fall 2024 Mentorship Program',
     roundId: 'round-2024-fall',
     role: role2024Fall,
-    startDate: '2024-09-01',
-    endDate: '2024-12-31',
     status: 'active' as const,
     partnerNames: partners2024Fall,
     partnerDetails: getPartnerDetails(partners2024Fall, role2024Fall),
-    meetings: generateMeetings('2024-09-01', partners2024Fall[0], false),
+    meetings: generateMeetings('2026-04-06', partners2024Fall[0], false),
     registration: {
       industry: role2024Fall === 'mentor' ? 'SWE' : 'UI / UX',
       skillsets: ['Career Path Guidance', 'Technical Skills Development', 'Networking'],
@@ -130,6 +128,21 @@ export const generateMockUserData = (role: UserRole, isCurrentUser: boolean = fa
     },
   });
   
+  // Some users registered for Spring 2026 (upcoming)
+  if (Math.random() > 0.7) {
+    const role2026Spring = getMentorshipRole();
+    const partners2026Spring = getPartnerNames(role2026Spring);
+    participations.push({
+      programName: 'Spring 2026 Mentorship Program',
+      roundId: 'round-2026-spring',
+      role: role2026Spring,
+      status: 'pending' as const,
+      partnerNames: partners2026Spring,
+      partnerDetails: getPartnerDetails(partners2026Spring, role2026Spring),
+      meetings: [],
+    });
+  }
+  
   // Some users participated in Spring 2024
   if (Math.random() > 0.4) {
     const role2024Spring = getMentorshipRole();
@@ -138,29 +151,10 @@ export const generateMockUserData = (role: UserRole, isCurrentUser: boolean = fa
       programName: 'Spring 2024 Mentorship Program',
       roundId: 'round-2024-spring',
       role: role2024Spring,
-      startDate: '2024-03-01',
-      endDate: '2024-06-30',
       status: 'completed' as const,
       partnerNames: partners2024Spring,
       partnerDetails: getPartnerDetails(partners2024Spring, role2024Spring),
       meetings: generateMeetings('2024-03-01', partners2024Spring[0], true),
-    });
-  }
-  
-  // Fewer users participated in Fall 2023
-  if (Math.random() > 0.6) {
-    const role2023Fall = getMentorshipRole();
-    const partners2023Fall = getPartnerNames(role2023Fall);
-    participations.push({
-      programName: 'Fall 2023 Mentorship Program',
-      roundId: 'round-2023-fall',
-      role: role2023Fall,
-      startDate: '2023-09-01',
-      endDate: '2023-12-31',
-      status: 'completed' as const,
-      partnerNames: partners2023Fall,
-      partnerDetails: getPartnerDetails(partners2023Fall, role2023Fall),
-      meetings: generateMeetings('2023-09-01', partners2023Fall[0], true),
     });
   }
   
@@ -215,63 +209,115 @@ export const getUserDataByRole = (role: UserRole): UserData => {
 
 export const mentorshipRounds: MentorshipRound[] = [
   {
-    id: 'round-2024-fall',
-    name: 'Fall 2024',
-    startDate: '2024-09-01',
-    endDate: '2024-12-31',
-    status: 'active',
+    id: 'round-2026-spring',
+    name: 'Spring 2026',
     requiredMeetings: 8,
+    participants: 0,
     phases: {
-      registration: '2024-08-15',
-      matching: '2024-08-25',
-      inProgress: '2024-12-15',
-      summary: '2024-12-25',
-      completed: '2024-12-31',
+      signUp: {
+        adminAction: '2026-05-18',
+        participantDDL: '2026-05-25',
+      },
+      onboarding: {
+        adminAction: '2026-06-02',
+        participantDDL: '2026-06-09',
+      },
+      matching: {
+        adminAction: '2026-06-12',
+        participantDDL: '2026-06-26',
+      },
+      reminder: {
+        adminAction: '2026-08-02',
+        participantDDL: '2026-08-30',
+      },
+      feedback: {
+        adminAction: '2026-09-02',
+        participantDDL: '2026-09-09',
+      },
     },
   },
   {
-    id: 'round-2026-spring',
-    name: 'Next Round',
-    startDate: '2026-03-01',
-    endDate: '2026-06-30',
-    status: 'completed', // Using 'completed' status to indicate future round (not active yet)
+    id: 'round-2024-fall',
+    name: 'Fall 2024',
     requiredMeetings: 8,
+    participants: 42,
     phases: {
-      registration: '2026-02-15',
-      matching: '2026-02-25',
-      inProgress: '2026-06-15',
-      summary: '2026-06-25',
-      completed: '2026-06-30',
+      signUp: {
+        adminAction: '2026-03-18',
+        participantDDL: '2026-03-25',
+      },
+      onboarding: {
+        adminAction: '2026-04-01',
+        participantDDL: '2026-04-05',
+      },
+      matching: {
+        adminAction: '2026-04-06',
+        participantDDL: '2026-04-30',
+      },
+      reminder: {
+        adminAction: '2026-06-02',
+        participantDDL: '2026-06-30',
+      },
+      feedback: {
+        adminAction: '2026-07-02',
+        participantDDL: '2026-07-09',
+      },
     },
   },
   {
     id: 'round-2024-spring',
     name: 'Spring 2024',
-    startDate: '2024-03-01',
-    endDate: '2024-06-30',
-    status: 'completed',
     requiredMeetings: 6,
+    participants: 38,
     phases: {
-      registration: '2024-02-15',
-      matching: '2024-02-25',
-      inProgress: '2024-06-15',
-      summary: '2024-06-25',
-      completed: '2024-06-30',
+      signUp: {
+        adminAction: '2023-12-18',
+        participantDDL: '2023-12-25',
+      },
+      onboarding: {
+        adminAction: '2024-02-02',
+        participantDDL: '2024-02-09',
+      },
+      matching: {
+        adminAction: '2024-02-12',
+        participantDDL: '2024-02-26',
+      },
+      reminder: {
+        adminAction: '2024-04-02',
+        participantDDL: '2024-04-30',
+      },
+      feedback: {
+        adminAction: '2024-05-02',
+        participantDDL: '2024-05-09',
+      },
     },
   },
   {
     id: 'round-2023-fall',
     name: 'Fall 2023',
-    startDate: '2023-09-01',
-    endDate: '2023-12-31',
-    status: 'completed',
     requiredMeetings: 8,
+    participants: 35,
     phases: {
-      registration: '2023-08-15',
-      matching: '2023-08-25',
-      inProgress: '2023-12-15',
-      summary: '2023-12-25',
-      completed: '2023-12-31',
+      signUp: {
+        adminAction: '2023-08-18',
+        participantDDL: '2023-08-25',
+      },
+      onboarding: {
+        adminAction: '2023-09-02',
+        participantDDL: '2023-09-09',
+      },
+      matching: {
+        adminAction: '2023-09-12',
+        participantDDL: '2023-09-26',
+      },
+      reminder: {
+        adminAction: '2023-11-02',
+        participantDDL: '2023-11-30',
+      },
+      feedback: {
+        adminAction: '2023-12-02',
+        participantDDL: '2023-12-09',
+      },
     },
   },
 ];

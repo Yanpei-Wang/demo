@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Label } from './ui/label';
 import { UserData } from '../types/dashboard';
 import { mentorshipRounds } from '../utils/mockData';
+import { getRoundStatus } from '../utils/roundStatus';
 
 interface MentorshipStatsCardProps {
   allUsers: UserData[];
@@ -94,11 +95,19 @@ export function MentorshipStatsCard({ allUsers, selectedRound, onRoundChange }: 
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Rounds</SelectItem>
-                {mentorshipRounds.map((round) => (
-                  <SelectItem key={round.id} value={round.id}>
-                    {round.name} {round.status === 'active' && '(Current)'}
-                  </SelectItem>
-                ))}
+                {[...mentorshipRounds]
+                  .sort((a, b) => {
+                    const order = { active: 0, upcoming: 1, completed: 2 };
+                    return order[getRoundStatus(a)] - order[getRoundStatus(b)];
+                  })
+                  .map((round) => {
+                    const status = getRoundStatus(round);
+                    return (
+                      <SelectItem key={round.id} value={round.id}>
+                        {round.name} {status === 'active' && '(Current)'}
+                      </SelectItem>
+                    );
+                  })}
               </SelectContent>
             </Select>
           </div>
