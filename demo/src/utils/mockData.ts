@@ -1,4 +1,88 @@
-import { UserData, UserRole, MentorshipMeeting, MentorshipRound, PartnerDetails } from '../types/dashboard';
+import { UserData, UserRole, MentorshipMeeting, MentorshipRound, PartnerDetails, EmployeeLevel, LeaveBalance, LeaveRequest, QuarterlyHoliday } from '../types/dashboard';
+
+// ─── Leave helpers ────────────────────────────────────────────────────────────
+
+const TODAY = new Date('2026-04-17');
+
+function yearsOfService(hireDate: string): number {
+  return (TODAY.getTime() - new Date(hireDate).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+}
+
+function calcAnnualLeaveQuota(hireDate: string, level: EmployeeLevel): number {
+  const years = yearsOfService(hireDate);
+  if (years < 1) return 0;
+  const li = level === 'L1' ? 0 : level === 'L2' ? 1 : 2;
+  if (years < 3)  return [5, 7, 10][li];
+  if (years < 5)  return [8, 10, 12][li];
+  if (years < 10) return [10, 12, 15][li];
+  return 15;
+}
+
+function makeLeaveBalance(hireDate: string, level: EmployeeLevel, annualUsed = 0, sickUsed = 0, compAccrued = 0, compUsed = 0): LeaveBalance {
+  const quota = calcAnnualLeaveQuota(hireDate, level);
+  const carryover = yearsOfService(hireDate) >= 1 ? Math.floor(Math.random() * 4) : 0;
+  return {
+    annual: quota + carryover,
+    annualUsed,
+    annualCarryover: carryover,
+    sick: 30,
+    sickUsed,
+    comp: compAccrued,
+    compUsed,
+    quarterly: 1,   // Q1 already issued
+    quarterlyUsed: Math.random() > 0.5 ? 1 : 0,
+  };
+}
+
+export const quarterlyHolidays2026: QuarterlyHoliday[] = [
+  { quarter: 'Q1', date: '2026-03-28', issued: true },
+  { quarter: 'Q2', date: '2026-06-26', issued: false },
+  { quarter: 'Q3', date: '2026-09-25', issued: false },
+  { quarter: 'Q4', date: '2026-12-25', issued: false },
+];
+
+// ─── Seeded employee roster (for leave system) ───────────────────────────────
+
+export interface EmployeeLeaveProfile {
+  id: string;
+  name: string;
+  email: string;
+  level: EmployeeLevel;
+  hireDate: string;
+  leaveBalance: LeaveBalance;
+}
+
+const EMPLOYEE_ROSTER: EmployeeLeaveProfile[] = [
+  { id: 'emp-001', name: 'Alice Chen',    email: 'alice_chen@circlecat.org',    level: 'L2', hireDate: '2021-07-12', leaveBalance: makeLeaveBalance('2021-07-12', 'L2', 3, 1, 2, 1) },
+  { id: 'emp-002', name: 'Brian Johnson', email: 'brian_j@circlecat.org',       level: 'L1', hireDate: '2024-03-01', leaveBalance: makeLeaveBalance('2024-03-01', 'L1', 0, 0, 0, 0) },
+  { id: 'emp-003', name: 'Catherine Lee', email: 'cat_lee@circlecat.org',       level: 'L3', hireDate: '2018-09-15', leaveBalance: makeLeaveBalance('2018-09-15', 'L3', 5, 2, 3, 2) },
+  { id: 'emp-004', name: 'Daniel Wong',   email: 'daniel_w@circlecat.org',      level: 'L2', hireDate: '2022-01-10', leaveBalance: makeLeaveBalance('2022-01-10', 'L2', 2, 0, 1, 0) },
+  { id: 'emp-005', name: 'Emily Zhang',   email: 'emily_z@circlecat.org',       level: 'L1', hireDate: '2025-06-01', leaveBalance: makeLeaveBalance('2025-06-01', 'L1', 0, 1, 0, 0) },
+  { id: 'emp-006', name: 'Frank Liu',     email: 'frank_liu@circlecat.org',     level: 'L2', hireDate: '2023-02-20', leaveBalance: makeLeaveBalance('2023-02-20', 'L2', 4, 1, 1, 1) },
+  { id: 'emp-007', name: 'Grace Kim',     email: 'grace_kim@circlecat.org',     level: 'L3', hireDate: '2016-11-05', leaveBalance: makeLeaveBalance('2016-11-05', 'L3', 7, 3, 4, 2) },
+  { id: 'emp-008', name: 'Henry Park',    email: 'henry_p@circlecat.org',       level: 'L1', hireDate: '2025-01-15', leaveBalance: makeLeaveBalance('2025-01-15', 'L1', 1, 0, 0, 0) },
+  { id: 'current-user', name: 'Current User', email: 'yuji@circlecat.org',     level: 'L2', hireDate: '2022-06-01', leaveBalance: makeLeaveBalance('2022-06-01', 'L2', 3, 1, 2, 1) },
+];
+
+export const getEmployeeRoster = (): EmployeeLeaveProfile[] => EMPLOYEE_ROSTER;
+
+// ─── Mock leave requests ──────────────────────────────────────────────────────
+
+export const mockLeaveRequests: LeaveRequest[] = [
+  // Current user's history
+  { id: 'lr-001', userId: 'current-user', userName: 'Current User', type: 'annual',      startDate: '2026-02-09', endDate: '2026-02-11', days: 3, reason: '家庭出游',           status: 'approved',  submittedAt: '2026-01-20', reviewedAt: '2026-01-21' },
+  { id: 'lr-002', userId: 'current-user', userName: 'Current User', type: 'sick',        startDate: '2026-03-05', endDate: '2026-03-05', days: 1, reason: '感冒发烧',           status: 'approved',  submittedAt: '2026-03-05', reviewedAt: '2026-03-05' },
+  { id: 'lr-003', userId: 'current-user', userName: 'Current User', type: 'annual',      startDate: '2026-05-04', endDate: '2026-05-08', days: 5, reason: '五一长假延长',       status: 'pending',   submittedAt: '2026-04-15' },
+  // Other employees — pending (for admin)
+  { id: 'lr-004', userId: 'emp-001', userName: 'Alice Chen',    type: 'annual',      startDate: '2026-04-28', endDate: '2026-04-30', days: 3, reason: '休息调整',           status: 'pending',   submittedAt: '2026-04-14' },
+  { id: 'lr-005', userId: 'emp-003', userName: 'Catherine Lee', type: 'sick',        startDate: '2026-04-17', endDate: '2026-04-18', days: 2, reason: '肠胃不适',           status: 'pending',   submittedAt: '2026-04-17' },
+  { id: 'lr-006', userId: 'emp-006', userName: 'Frank Liu',     type: 'personal',    startDate: '2026-04-22', endDate: '2026-04-22', days: 1, reason: '处理私人事务',       status: 'pending',   submittedAt: '2026-04-16' },
+  { id: 'lr-007', userId: 'emp-007', userName: 'Grace Kim',     type: 'comp',        startDate: '2026-05-02', endDate: '2026-05-02', days: 1, reason: '上月周末加班补休',   status: 'pending',   submittedAt: '2026-04-16' },
+  // Other employees — resolved
+  { id: 'lr-008', userId: 'emp-002', userName: 'Brian Johnson', type: 'annual',      startDate: '2026-03-20', endDate: '2026-03-21', days: 2, reason: '短途旅行',           status: 'approved',  submittedAt: '2026-03-10', reviewedAt: '2026-03-11' },
+  { id: 'lr-009', userId: 'emp-004', userName: 'Daniel Wong',   type: 'annual',      startDate: '2026-04-01', endDate: '2026-04-03', days: 3, reason: '清明节延长',         status: 'approved',  submittedAt: '2026-03-25', reviewedAt: '2026-03-26' },
+  { id: 'lr-010', userId: 'emp-005', userName: 'Emily Zhang',   type: 'annual',      startDate: '2026-04-10', endDate: '2026-04-12', days: 3, reason: '出行计划',           status: 'rejected',  submittedAt: '2026-04-08', reviewedAt: '2026-04-09', rejectionReason: '该时段人员不足，请调整时间' },
+];
 
 const generateMeetings = (startDateStr: string, partnerName: string, isCompleted: boolean = false): MentorshipMeeting[] => {
   const meetings: MentorshipMeeting[] = [];

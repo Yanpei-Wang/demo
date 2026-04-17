@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { UserData, MentorshipParticipation, MentorshipRegistration } from '../types/dashboard';
 import { ActivityMetricsCard } from './ActivityMetricsCard';
 import { MentorshipCard } from './MentorshipCard';
+import { LeavePanel } from './LeavePanel';
 import { MeetingManagementDialog } from './MeetingManagementDialog';
 import { MentorshipRegistrationDialog } from './MentorshipRegistrationDialog';
 import { MatchingResultModal } from './MatchingResultModal';
@@ -156,7 +157,9 @@ export function PersonalDashboard({ userData }: PersonalDashboardProps) {
       )}
 
       <MentorshipCard participations={participations} />
-      
+
+      <LeavePanel userId={userData.id} userName={userData.name} />
+
       <ActivityMetricsCard metrics={userData.activityMetrics} />
 
       {activeParticipation && (

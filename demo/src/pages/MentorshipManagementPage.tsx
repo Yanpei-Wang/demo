@@ -13,6 +13,8 @@ import { MentorshipRound } from '../types/dashboard';
 import { mentorshipRounds as initialRounds } from '../utils/mockData';
 import { getRoundStatus } from '../utils/roundStatus';
 import { ParticipantSearchPanel } from '../components/ParticipantSearchPanel';
+import { AdminLeavePanel } from '../components/AdminLeavePanel';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 
 
 const PHASE_CONFIG = [
@@ -388,6 +390,13 @@ export function MentorshipManagementPage() {
 
   return (
     <div className="space-y-6">
+      <Tabs defaultValue="mentorship">
+        <TabsList className="bg-gray-100">
+          <TabsTrigger value="mentorship" className="data-[state=active]:bg-white data-[state=active]:text-[#6035F3]">导师匹配管理</TabsTrigger>
+          <TabsTrigger value="leave" className="data-[state=active]:bg-white data-[state=active]:text-[#6035F3]">假期管理</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="mentorship" className="mt-4 space-y-6">
       {/* Rounds Table */}
       <Card className="border-gray-200 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between">
@@ -771,6 +780,12 @@ export function MentorshipManagementPage() {
       </Dialog>
 
       <ParticipantSearchPanel />
+        </TabsContent>
+
+        <TabsContent value="leave" className="mt-4">
+          <AdminLeavePanel />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

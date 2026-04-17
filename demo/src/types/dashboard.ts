@@ -66,6 +66,9 @@ export interface UserData {
   isTerminated: boolean;
   activityMetrics: ActivityMetrics;
   mentorshipParticipation: MentorshipParticipation[];
+  level?: EmployeeLevel;
+  hireDate?: string;
+  leaveBalance?: LeaveBalance;
 }
 
 export interface DateRange {
@@ -96,4 +99,52 @@ export interface MentorshipPair {
   completedMeetings: number;
   totalMeetings: number;
   totalHours: number;
+}
+
+export type EmployeeLevel = 'L1' | 'L2' | 'L3';
+
+export type LeaveType =
+  | 'annual'
+  | 'sick'
+  | 'personal'
+  | 'marriage'
+  | 'maternity'
+  | 'paternity'
+  | 'bereavement'
+  | 'comp'
+  | 'quarterly';
+
+export interface LeaveRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  type: LeaveType;
+  startDate: string;
+  endDate: string;
+  startTime?: string;
+  endTime?: string;
+  days: number;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
+  submittedAt: string;
+  reviewedAt?: string;
+}
+
+export interface LeaveBalance {
+  annual: number;
+  annualUsed: number;
+  annualCarryover: number;
+  sick: number;
+  sickUsed: number;
+  comp: number;
+  compUsed: number;
+  quarterly: number;
+  quarterlyUsed: number;
+}
+
+export interface QuarterlyHoliday {
+  quarter: string;
+  date: string;
+  issued: boolean;
 }
