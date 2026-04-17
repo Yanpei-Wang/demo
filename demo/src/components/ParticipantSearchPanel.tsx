@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
-import { Search, Download, Trash2 } from 'lucide-react';
+import { Search, Download, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { generateMockDataset, mentorshipRounds } from '../utils/mockData';
 import { MentorshipMeeting, UserData } from '../types/dashboard';
 
@@ -89,10 +89,15 @@ const EMPTY_FILTERS = {
   matchingStatus: 'all',
 };
 
+type SortKey = 'name' | 'matchedUser' | 'roundName' | 'matchingStatus' | 'onboardingStatus';
+type SortDir = 'asc' | 'desc';
+
 export function ParticipantSearchPanel() {
   const allRows = useMemo(() => buildRows(generateMockDataset()), []);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [results, setResults] = useState<ParticipantRow[] | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [trackerRow, setTrackerRow] = useState<ParticipantRow | null>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -103,6 +108,25 @@ export function ParticipantSearchPanel() {
 
   const set = (key: keyof typeof EMPTY_FILTERS) => (value: string) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  const sortedResults = useMemo(() => {
+    if (!results || !sortKey) return results;
+    return [...results].sort((a, b) => {
+      const av = a[sortKey] ?? '';
+      const bv = b[sortKey] ?? '';
+      const cmp = av.localeCompare(bv);
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [results, sortKey, sortDir]);
 
   const handleSearch = () => {
     const q = filters;
@@ -260,7 +284,6 @@ export function ParticipantSearchPanel() {
       <Card className="border-gray-200 shadow-sm">
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-gray-900">Participant Search</CardTitle>
-          <CardDescription>Search participants across all mentorship rounds</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           {/* Filters */}
@@ -360,18 +383,41 @@ export function ParticipantSearchPanel() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50 hover:bg-gray-50">
-                        <TableHead className="font-semibold text-gray-700">Name</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Email</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Matched User</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Role</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Round</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Matching Status</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Onboarding Status</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Meeting Log</TableHead>
+                        {(
+                          [
+                            { key: 'name' as SortKey, label: 'Name' },
+                            { key: null, label: 'Email' },
+                            { key: 'matchedUser' as SortKey, label: 'Matched User' },
+                            { key: null, label: 'Role' },
+                            { key: 'roundName' as SortKey, label: 'Round' },
+                            { key: 'matchingStatus' as SortKey, label: 'Matching Status' },
+                            { key: 'onboardingStatus' as SortKey, label: 'Onboarding Status' },
+                            { key: null, label: 'Meeting Log' },
+                          ] as { key: SortKey | null; label: string }[]
+                        ).map(({ key, label }) =>
+                          key ? (
+                            <TableHead
+                              key={label}
+                              className="font-semibold text-gray-700 cursor-pointer select-none hover:bg-gray-100"
+                              onClick={() => handleSort(key)}
+                            >
+                              <div className="flex items-center gap-1">
+                                {label}
+                                {sortKey === key ? (
+                                  sortDir === 'asc' ? <ChevronUp className="h-3.5 w-3.5 text-[#6035F3]" /> : <ChevronDown className="h-3.5 w-3.5 text-[#6035F3]" />
+                                ) : (
+                                  <ChevronsUpDown className="h-3.5 w-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </TableHead>
+                          ) : (
+                            <TableHead key={label} className="font-semibold text-gray-700">{label}</TableHead>
+                          )
+                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {results.map((row, i) => (
+                      {(sortedResults ?? results).map((row, i) => (
                         <TableRow key={`${row.userId}-${row.roundId}-${i}`} className="hover:bg-gray-50 transition-colors">
                           <TableCell className="font-medium text-gray-900">{row.name}</TableCell>
                           <TableCell className="text-gray-600 text-sm">{row.email}</TableCell>
@@ -488,8 +534,6 @@ export function ParticipantSearchPanel() {
                     const label = getMeetingLabel(idx, total);
                     const partnerName = trackerRow?.matchedUser ?? '';
                     const noteOptions = getNoteOptions(partnerName);
-                    const isFuture = em.date ? new Date(em.date) > new Date() : false;
-                    const notYetScheduledInvalid = em.note === 'Not yet scheduled' && em.date && !isFuture;
                     return (
                       <TableRow key={em.id} className="align-top hover:bg-gray-50">
                         <TableCell className="pl-3 pt-3">
@@ -511,22 +555,8 @@ export function ParticipantSearchPanel() {
                             </SelectContent>
                           </Select>
                         </TableCell>
-                        <TableCell className="pt-2">
-                          <div className="flex flex-col gap-1">
-                            <Input type="date" value={em.date}
-                              onChange={(e) => updateEditedMeeting(em.id, 'date', e.target.value)}
-                              className={`h-8 text-sm w-36 ${notYetScheduledInvalid ? 'border-red-400' : 'border-gray-300'}`} />
-                            <div className="flex items-center gap-1">
-                              <Input type="time" value={em.startTime}
-                                onChange={(e) => updateEditedMeeting(em.id, 'startTime', e.target.value)}
-                                className="h-8 text-sm border-gray-300 w-24" />
-                              <span className="text-gray-400 text-sm">–</span>
-                              <Input type="time" value={em.endTime}
-                                onChange={(e) => updateEditedMeeting(em.id, 'endTime', e.target.value)}
-                                className="h-8 text-sm border-gray-300 w-24" />
-                            </div>
-                            {notYetScheduledInvalid && <p className="text-xs text-red-500">Date must be in the future</p>}
-                          </div>
+                        <TableCell className="text-gray-600 text-sm pt-3">
+                          {em.date ? `${em.date} · ${em.startTime} – ${em.endTime}` : '—'}
                         </TableCell>
                         <TableCell className="pt-2">
                           <Select value={em.note === '' ? 'none' : em.note} onValueChange={(v) => updateEditedMeeting(em.id, 'note', v === 'none' ? '' : v)}>
