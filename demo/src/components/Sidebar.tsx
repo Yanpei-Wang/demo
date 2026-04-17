@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Shield, User, Settings } from 'lucide-react';
+import { Shield, User } from 'lucide-react';
 import { cn } from './ui/utils';
 import { UserRole } from '../types/dashboard';
 
@@ -16,19 +16,13 @@ export function Sidebar({ userRole }: SidebarProps) {
       title: 'Personal Dashboard',
       href: '/dashboard',
       icon: User,
-      show: true, // All users including admin can see personal dashboard
+      show: true,
     },
     {
       title: 'Admin Dashboard',
       href: '/admin/dashboard',
       icon: Shield,
-      show: isAdmin, // Only admin can see admin dashboard
-    },
-    {
-      title: 'Mentorship Management',
-      href: '/admin/mentorship',
-      icon: Settings,
-      show: isAdmin, // Only admin can see mentorship management
+      show: isAdmin,
     },
   ];
 

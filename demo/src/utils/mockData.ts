@@ -196,7 +196,47 @@ export const generateMockDataset = (): UserData[] => {
   for (let i = 0; i < 7; i++) {
     data.push(generateMockUserData('external_mentee'));
   }
-  
+
+  // Fixed demo user — covers all meeting log note cases
+  data.push({
+    id: 'user-frank-liu',
+    name: 'Frank Liu',
+    ldap: 'frank_liu',
+    role: 'circlecat_employee',
+    isTerminated: false,
+    activityMetrics: { jiraTickets: 18, mergedCLs: 12, mergedLoc: 1800, meetingHours: 24, chatMessages: 130 },
+    mentorshipParticipation: [
+      {
+        programName: 'Fall 2024 Mentorship Program',
+        roundId: 'round-2024-fall',
+        role: 'mentee',
+        startDate: '2026-03-10',
+        endDate: '2026-07-09',
+        status: 'active',
+        partnerNames: ['Dr. Garcia'],
+        partnerDetails: [{ name: 'Dr. Garcia', email: 'dr.garcia@circlecat.org', matchReason: 'Matched based on shared interest in Frontend Development.' }],
+        meetings: [
+          // idx 0 — Completed (no note)
+          { id: 'm1', date: '2026-03-10', time: '14:00 - 15:00', startTime: '14:00', endTime: '15:00', timezone: 'America/Los_Angeles', duration: 60, partnerName: 'Dr. Garcia', partnerEmail: 'dr.garcia@circlecat.org', isCompleted: true },
+          // idx 1 — Unknown absence
+          { id: 'm2', date: '2026-03-17', time: '14:00 - 15:00', startTime: '14:00', endTime: '15:00', timezone: 'America/Los_Angeles', duration: 60, partnerName: 'Dr. Garcia', partnerEmail: 'dr.garcia@circlecat.org', isCompleted: false },
+          // idx 2 — Completed but Dr. Garcia arrived late
+          { id: 'm3', date: '2026-03-24', time: '14:15 - 15:00', startTime: '14:15', endTime: '15:00', timezone: 'America/Los_Angeles', duration: 45, partnerName: 'Dr. Garcia', partnerEmail: 'dr.garcia@circlecat.org', isCompleted: true, note: 'Dr. Garcia late arrival' },
+          // idx 3 — Completed, unknown late arrival
+          { id: 'm4', date: '2026-03-31', time: '14:00 - 15:00', startTime: '14:00', endTime: '15:00', timezone: 'America/Los_Angeles', duration: 60, partnerName: 'Dr. Garcia', partnerEmail: 'dr.garcia@circlecat.org', isCompleted: true, note: 'Unknown late arrival' },
+          // idx 4 — Not Completed, Frank absent
+          { id: 'm5', date: '2026-04-07', time: '14:00 - 15:00', startTime: '14:00', endTime: '15:00', timezone: 'America/Los_Angeles', duration: 60, partnerName: 'Dr. Garcia', partnerEmail: 'dr.garcia@circlecat.org', isCompleted: false, note: 'Frank Liu absent' },
+          // idx 5 — Insufficient duration
+          { id: 'm6', date: '2026-04-14', time: '14:00 - 14:20', startTime: '14:00', endTime: '14:20', timezone: 'America/Los_Angeles', duration: 20, partnerName: 'Dr. Garcia', partnerEmail: 'dr.garcia@circlecat.org', isCompleted: false },
+          // idx 6 — Not yet scheduled
+          { id: 'm7', date: '2026-04-21', time: '14:00 - 15:00', startTime: '14:00', endTime: '15:00', timezone: 'America/Los_Angeles', duration: 60, partnerName: 'Dr. Garcia', partnerEmail: 'dr.garcia@circlecat.org', isCompleted: false },
+          // idx 7 — Not yet scheduled
+          { id: 'm8', date: '2026-04-28', time: '14:00 - 15:00', startTime: '14:00', endTime: '15:00', timezone: 'America/Los_Angeles', duration: 60, partnerName: 'Dr. Garcia', partnerEmail: 'dr.garcia@circlecat.org', isCompleted: false },
+        ],
+      } as any,
+    ],
+  } as any);
+
   return data;
 };
 
@@ -213,6 +253,9 @@ export const mentorshipRounds: MentorshipRound[] = [
     name: 'Spring 2026',
     requiredMeetings: 8,
     participants: 0,
+    completedMeetings: 0,
+    mentorRating: null,
+    menteeRating: null,
     phases: {
       signUp: {
         adminAction: '2026-05-18',
@@ -241,6 +284,9 @@ export const mentorshipRounds: MentorshipRound[] = [
     name: 'Fall 2024',
     requiredMeetings: 8,
     participants: 42,
+    completedMeetings: 89,
+    mentorRating: null,
+    menteeRating: null,
     phases: {
       signUp: {
         adminAction: '2026-03-18',
@@ -269,6 +315,9 @@ export const mentorshipRounds: MentorshipRound[] = [
     name: 'Spring 2024',
     requiredMeetings: 6,
     participants: 38,
+    completedMeetings: 102,
+    mentorRating: 4.3,
+    menteeRating: 4.6,
     phases: {
       signUp: {
         adminAction: '2023-12-18',
@@ -297,6 +346,9 @@ export const mentorshipRounds: MentorshipRound[] = [
     name: 'Fall 2023',
     requiredMeetings: 8,
     participants: 35,
+    completedMeetings: 124,
+    mentorRating: 4.1,
+    menteeRating: 4.5,
     phases: {
       signUp: {
         adminAction: '2023-08-18',

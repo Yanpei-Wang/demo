@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { MentorshipRound } from '../types/dashboard';
 import { mentorshipRounds as initialRounds } from '../utils/mockData';
 import { getRoundStatus } from '../utils/roundStatus';
+import { ParticipantSearchPanel } from '../components/ParticipantSearchPanel';
 
 
 const PHASE_CONFIG = [
@@ -387,28 +388,17 @@ export function MentorshipManagementPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900" style={{ color: '#171717' }}>
-            Mentorship Round Management
-          </h1>
-          <p className="text-gray-600 mt-2">Manage all mentorship program rounds' basic information and requirements</p>
-        </div>
-        <Button
-          onClick={() => handleOpenDialog()}
-          className="bg-[#6035F3] hover:bg-[#4A28C4] text-white shadow-md hover:shadow-lg transition-all"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create New Round
-        </Button>
-      </div>
-
       {/* Rounds Table */}
       <Card className="border-gray-200 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-gray-900">All Rounds</CardTitle>
-          <CardDescription>View and manage all Mentorship program rounds</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-xl font-semibold text-gray-900">Mentorship Round Management</CardTitle>
+          <Button
+            onClick={() => handleOpenDialog()}
+            className="bg-[#6035F3] hover:bg-[#4A28C4] text-white shadow-md hover:shadow-lg transition-all"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create New Round
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border border-gray-200 overflow-hidden">
@@ -418,6 +408,9 @@ export function MentorshipManagementPage() {
                   <TableHead className="font-semibold text-gray-700">Round Name</TableHead>
                   <TableHead className="font-semibold text-gray-700">Participants</TableHead>
                   <TableHead className="font-semibold text-gray-700">Required Meetings</TableHead>
+                  <TableHead className="font-semibold text-gray-700">Meeting Log Completion</TableHead>
+                  <TableHead className="font-semibold text-gray-700">Mentor Rating</TableHead>
+                  <TableHead className="font-semibold text-gray-700">Mentee Rating</TableHead>
                   <TableHead className="font-semibold text-gray-700 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -445,6 +438,26 @@ export function MentorshipManagementPage() {
                         <TableCell className="text-gray-900 font-semibold">
                           {round.requiredMeetings} times
                         </TableCell>
+                        <TableCell>
+                          {(() => {
+                            const r = round as any;
+                            const pairs = Math.floor((r.participants || 0) / 2);
+                            if (pairs === 0) return <span className="text-gray-400">—</span>;
+                            const pct = Math.round((r.completedMeetings || 0) / (pairs * round.requiredMeetings) * 100);
+                            const color = pct >= 80 ? 'text-green-600' : pct >= 50 ? 'text-amber-600' : 'text-red-500';
+                            return <span className={`font-semibold ${color}`}>{pct}%</span>;
+                          })()}
+                        </TableCell>
+                        <TableCell>
+                          {(round as any).mentorRating != null
+                            ? <span className="font-semibold text-gray-900">{(round as any).mentorRating.toFixed(1)}</span>
+                            : <span className="text-gray-400">—</span>}
+                        </TableCell>
+                        <TableCell>
+                          {(round as any).menteeRating != null
+                            ? <span className="font-semibold text-gray-900">{(round as any).menteeRating.toFixed(1)}</span>
+                            : <span className="text-gray-400">—</span>}
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Button
@@ -468,7 +481,7 @@ export function MentorshipManagementPage() {
                       </TableRow>
                     ))}
                     <TableRow className="bg-gray-50 font-semibold">
-                      <TableCell colSpan={3} className="text-gray-900">
+                      <TableCell colSpan={6} className="text-gray-900">
                         Total Completed Rounds: {completedRounds}
                       </TableCell>
                       <TableCell></TableCell>
@@ -756,6 +769,8 @@ export function MentorshipManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ParticipantSearchPanel />
     </div>
   );
 }

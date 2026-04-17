@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
 import { Layout } from './components/Layout';
 import { DashboardPage } from './pages/DashboardPage';
-import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { MentorshipManagementPage } from './pages/MentorshipManagementPage';
 import ProfilePage from './pages/ProfilePage';
 import { UserRole } from './types/dashboard';
@@ -52,10 +51,6 @@ export default function App() {
           />
           <Route
             path="/admin/dashboard"
-            element={<AdminDashboardPage userRole={currentRole} />}
-          />
-          <Route
-            path="/admin/mentorship"
             element={<MentorshipManagementPage />}
           />
           <Route
