@@ -6,9 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
-import { Search, Download, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Search, Download, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, ChevronDown as ChevronDownIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Checkbox } from './ui/checkbox';
 import { generateMockDataset, mentorshipRounds } from '../utils/mockData';
-import { MentorshipMeeting, UserData } from '../types/dashboard';
+import { MentorshipMeeting, UserData, Training, TrainingCategory, TrainingStatus } from '../types/dashboard';
 
 interface ParticipantRow {
   userId: string;
@@ -23,6 +25,7 @@ interface ParticipantRow {
   completedMeetings: number;
   requiredMeetings: number;
   meetings: MentorshipMeeting[];
+  trainings: Training[];
 }
 
 function getMeetingLabel(index: number, total: number): string {
@@ -73,11 +76,31 @@ function buildRows(users: UserData[]): ParticipantRow[] {
         completedMeetings: p.meetings.filter((m) => m.isCompleted).length,
         requiredMeetings: round?.requiredMeetings ?? p.meetings.length,
         meetings: p.meetings,
+        trainings: (user.trainings ?? []) as Training[],
       });
     }
   }
   return rows;
 }
+
+const TRAINING_CATEGORY_LABELS: Record<TrainingCategory, string> = {
+  mentorship_mentee_onboarding: 'Mentee Onboarding',
+  mentorship_mentor_onboarding: 'Mentor Onboarding',
+  residency_program_onboarding: 'Residency Onboarding',
+  corporate_culture_course: 'Corporate Culture',
+};
+
+const TRAINING_STATUS_LABELS: Record<TrainingStatus, string> = {
+  to_do: 'To Do',
+  in_progress: 'In Progress',
+  done: 'Done',
+};
+
+const TRAINING_STATUS_COLORS: Record<TrainingStatus, string> = {
+  to_do: 'border-gray-200 bg-gray-50 text-gray-500',
+  in_progress: 'border-yellow-200 bg-yellow-50 text-yellow-700',
+  done: 'border-green-200 bg-green-50 text-green-700',
+};
 
 const EMPTY_FILTERS = {
   name: '',
@@ -98,6 +121,7 @@ export function ParticipantSearchPanel() {
   const [results, setResults] = useState<ParticipantRow[] | null>(null);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [trainingCategories, setTrainingCategories] = useState<TrainingCategory[]>([]);
   const [trackerRow, setTrackerRow] = useState<ParticipantRow | null>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -139,6 +163,10 @@ export function ParticipantSearchPanel() {
         if (q.roundId !== 'all' && row.roundId !== q.roundId) return false;
         if (q.onboardingStatus !== 'all' && row.onboardingStatus !== q.onboardingStatus) return false;
         if (q.matchingStatus !== 'all' && row.matchingStatus !== q.matchingStatus) return false;
+        if (trainingCategories.length > 0) {
+          const match = row.trainings.some((t) => trainingCategories.includes(t.category));
+          if (!match) return false;
+        }
         return true;
       })
     );
@@ -287,76 +315,118 @@ export function ParticipantSearchPanel() {
         </CardHeader>
         <CardContent className="space-y-5">
           {/* Filters */}
-          <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-            <div className="flex gap-3">
-              <Input
-                placeholder="Name"
-                value={filters.name}
-                onChange={(e) => set('name')(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="flex-1 bg-white border-gray-200"
-              />
-              <Input
-                placeholder="Email"
-                value={filters.email}
-                onChange={(e) => set('email')(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="flex-1 bg-white border-gray-200"
-              />
-              <Input
-                placeholder="Matched User"
-                value={filters.matchedUser}
-                onChange={(e) => set('matchedUser')(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="flex-1 bg-white border-gray-200"
-              />
+          <div className="bg-gray-50 rounded-xl p-5 space-y-4">
+            <div className="grid grid-cols-3 gap-y-4" style={{ columnGap: '2rem' }}>
+              {/* Name */}
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500">Name</p>
+                <Input placeholder="Search name…" value={filters.name} onChange={(e) => set('name')(e.target.value)} onKeyDown={handleKeyDown} className="bg-white border-gray-200 h-9" />
+              </div>
+              {/* Email */}
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500">Email</p>
+                <Input placeholder="Search email…" value={filters.email} onChange={(e) => set('email')(e.target.value)} onKeyDown={handleKeyDown} className="bg-white border-gray-200 h-9" />
+              </div>
+              {/* Matched User */}
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500">Matched User</p>
+                <Input placeholder="Search matched user…" value={filters.matchedUser} onChange={(e) => set('matchedUser')(e.target.value)} onKeyDown={handleKeyDown} className="bg-white border-gray-200 h-9" />
+              </div>
+              {/* Round */}
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500">Round</p>
+                <Select value={filters.roundId} onValueChange={set('roundId')}>
+                  <SelectTrigger className="bg-white border-gray-200 h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Rounds</SelectItem>
+                    {(mentorshipRounds as any[]).map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* Role */}
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500">Role</p>
+                <Select value={filters.role} onValueChange={set('role')}>
+                  <SelectTrigger className="bg-white border-gray-200 h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="mentor">Mentor</SelectItem>
+                    <SelectItem value="mentee">Mentee</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* Matching Status */}
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500">Matching Status</p>
+                <Select value={filters.matchingStatus} onValueChange={set('matchingStatus')}>
+                  <SelectTrigger className="bg-white border-gray-200 h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="matched">Matched</SelectItem>
+                    <SelectItem value="unmatched">Unmatched</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* Training — multi-select */}
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500">Training</p>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="w-full flex items-center justify-between rounded-md border border-gray-200 bg-white px-3 h-9 text-sm text-left hover:bg-gray-50 transition-colors">
+                      <span className={trainingCategories.length === 0 ? 'text-gray-400' : 'text-gray-900'}>
+                        {trainingCategories.length === 0
+                          ? 'All'
+                          : trainingCategories.length === 1
+                            ? TRAINING_CATEGORY_LABELS[trainingCategories[0]]
+                            : `${trainingCategories.length} selected`}
+                      </span>
+                      <ChevronDownIcon className="h-4 w-4 text-gray-400 shrink-0" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-2" align="start">
+                    <div className="space-y-1">
+                      {(Object.entries(TRAINING_CATEGORY_LABELS) as [TrainingCategory, string][]).map(([value, label]) => (
+                        <label key={value} className="flex items-center gap-2.5 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer">
+                          <Checkbox
+                            checked={trainingCategories.includes(value)}
+                            onCheckedChange={(checked) =>
+                              setTrainingCategories((prev) =>
+                                checked ? [...prev, value] : prev.filter((v) => v !== value)
+                              )
+                            }
+                          />
+                          <span className="text-sm text-gray-700">{label}</span>
+                        </label>
+                      ))}
+                      {trainingCategories.length > 0 && (
+                        <button
+                          onClick={() => setTrainingCategories([])}
+                          className="w-full text-xs text-gray-400 hover:text-gray-600 text-left px-2 pt-1 mt-1 border-t border-gray-100"
+                        >
+                          Clear selection
+                        </button>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              {/* Onboarding Status */}
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500">Onboarding Status</p>
+                <Select value={filters.onboardingStatus} onValueChange={set('onboardingStatus')}>
+                  <SelectTrigger className="bg-white border-gray-200 h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="incomplete">Incomplete</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <Select value={filters.role} onValueChange={set('role')}>
-                <SelectTrigger className="w-32 bg-white border-gray-200">
-                  <SelectValue placeholder="Role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="mentor">Mentor</SelectItem>
-                  <SelectItem value="mentee">Mentee</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filters.roundId} onValueChange={set('roundId')}>
-                <SelectTrigger className="flex-1 bg-white border-gray-200">
-                  <SelectValue placeholder="Round" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Rounds</SelectItem>
-                  {(mentorshipRounds as any[]).map((r) => (
-                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={filters.onboardingStatus} onValueChange={set('onboardingStatus')}>
-                <SelectTrigger className="w-44 bg-white border-gray-200">
-                  <SelectValue placeholder="Onboarding" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Onboarding</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="incomplete">Incomplete</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filters.matchingStatus} onValueChange={set('matchingStatus')}>
-                <SelectTrigger className="w-40 bg-white border-gray-200">
-                  <SelectValue placeholder="Matching" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Matching</SelectItem>
-                  <SelectItem value="matched">Matched</SelectItem>
-                  <SelectItem value="unmatched">Unmatched</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={handleSearch}
-                className="bg-[#6035F3] hover:bg-[#4A28C4] text-white px-6 shrink-0"
-              >
+            <div className="flex justify-end">
+              <Button onClick={handleSearch} className="bg-[#6035F3] hover:bg-[#4A28C4] text-white px-6">
                 <Search className="h-4 w-4 mr-2" />
                 Search
               </Button>
@@ -392,6 +462,7 @@ export function ParticipantSearchPanel() {
                             { key: 'roundName' as SortKey, label: 'Round' },
                             { key: 'matchingStatus' as SortKey, label: 'Matching Status' },
                             { key: 'onboardingStatus' as SortKey, label: 'Onboarding Status' },
+                            { key: null, label: 'Training' },
                             { key: null, label: 'Meeting Log' },
                           ] as { key: SortKey | null; label: string }[]
                         ).map(({ key, label }) =>
@@ -458,6 +529,22 @@ export function ParticipantSearchPanel() {
                             >
                               {row.onboardingStatus === 'completed' ? 'Completed' : 'Incomplete'}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {row.trainings.length === 0 ? (
+                              <span className="text-gray-400">—</span>
+                            ) : (
+                              <div className="flex flex-col gap-1">
+                                {row.trainings.map((t) => (
+                                  <div key={t.category} className="flex items-center gap-1.5">
+                                    <Badge variant="outline" className={`text-xs py-0 ${TRAINING_STATUS_COLORS[t.status]}`}>
+                                      {TRAINING_STATUS_LABELS[t.status]}
+                                    </Badge>
+                                    <span className="text-xs text-gray-500">{TRAINING_CATEGORY_LABELS[t.category]}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell>
                             {row.matchingStatus === 'unmatched' ? (
